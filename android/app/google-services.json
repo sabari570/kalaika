@@ -12,7 +12,20 @@
           "package_name": "com.kalaika.feemanager"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "79708081257-am1i6r7qvd1i0ifqhgvdmu6bprkufr3e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.kalaika.feemanager",
+            "certificate_hash": "506fe138ad5bdb2b1bdd5e3b702967e58ea4b423"
+          }
+        },
+        {
+          "client_id": "79708081257-cqflpab22k0vpq9djqtj40eom7kidr9l.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCLfuazn21-0RtaNWUQh8q0l4Gx4C6xXDI"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "79708081257-cqflpab22k0vpq9djqtj40eom7kidr9l.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

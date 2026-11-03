@@ -34,6 +34,17 @@ abstract final class AppStrings {
   static const String edit = 'Edit';
   static const String createBranch = 'Create branch';
   static const String continueWithGoogle = 'Continue with Google';
+  static const String signInTitle = 'Sign in';
+  static const String signInSubtitle =
+      'Use your Google account to access Kalaika.';
+  static const String signOut = 'Sign out';
+  static const String signOutConfirmTitle = 'Sign out';
+  static const String signOutConfirmMessage =
+      'You will need to sign in again to access Kalaika.';
+  static const String signInFailed =
+      'Sign in could not be completed. Please try again.';
+  static const String firebaseInitFailed =
+      'The application could not be initialized. Please restart the app.';
 
   /// Empty states.
   static const String noBranchesYet = 'No branches have been created.';

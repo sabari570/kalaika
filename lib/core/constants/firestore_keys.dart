@@ -8,6 +8,11 @@ abstract final class FirestoreKeys {
   static const String email = 'email';
   static const String createdAt = 'createdAt';
   static const String institute = 'institute';
+  static const String tagline = 'tagline';
+  static const String addressLines = 'addressLines';
+  static const String footerNote = 'footerNote';
+  static const String signatory = 'signatory';
+  static const String phone = 'phone';
   static const String messageTemplate = 'messageTemplate';
 
   /// Meta subcollection under a user.

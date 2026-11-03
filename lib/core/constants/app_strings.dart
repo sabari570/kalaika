@@ -77,8 +77,88 @@ abstract final class AppStrings {
   static const String applyFeeNewStudentsOnly = 'Apply to new students only';
   static const String applyFeeAllStudents = 'Apply to all active students';
   static const String batchDetailPlaceholder =
-      'Fee tracking and student management will be available in '
-      'the next milestone.';
+      'The fee tracker for this batch will be available in the '
+      'next milestone.';
+  static const String tabFees = 'Fees';
+  static const String tabStudents = 'Students';
+  static const String feeSearchHint =
+      'Search by student or guardian name';
+  static const String feeFilterAll = 'All';
+  static const String feePaidOfTotal = 'Paid {paid} of {total}';
+  static const String feeCollected = 'Collected Rs. {amount}';
+  static const String noMatchingFeeRows =
+      'No students match the current filter.';
+  static const String sendReceipt = 'Send';
+  static const String recordPayment = 'Record payment';
+  static const String debugCreatePayment =
+      'Debug payment recorded for testing.';
+  static const String addStudent = 'Add student';
+  static const String importFromExcel = 'Import from Excel';
+  static const String editStudent = 'Edit student';
+  static const String newStudent = 'New student';
+  static const String studentName = 'Full name';
+  static const String phoneNumber = 'Phone number';
+  static const String whatsappNumber = 'WhatsApp number';
+  static const String sameAsPhone = 'Same as phone number';
+  static const String dateOfBirth = 'Date of birth';
+  static const String age = 'Age';
+  static const String guardian = 'Guardian';
+  static const String guardianPhone = 'Guardian phone number';
+  static const String address = 'Address';
+  static const String studentNameRequired = 'Full name is required.';
+  static const String whatsappRequired = 'WhatsApp number is required.';
+  static const String studentFeeInvalid =
+      'Monthly fee must be a positive whole number.';
+  static const String studentNotFound = 'The student could not be found.';
+  static const String studentDuplicate =
+      'Another student in this batch already uses the same full name '
+      'and WhatsApp number.';
+  static const String phoneInvalid = 'The phone number is not valid.';
+  static const String phoneNeedsCorrection =
+      'The phone number must be corrected before import.';
+  static const String phoneConfirmTitle = 'Confirm phone number';
+  static const String phoneConfirmMessage =
+      'Please confirm that this international number is correct.';
+  static const String noStudentsYet = 'No students have been added.';
+  static const String activeStudent = 'Active';
+  static const String call = 'Call';
+  static const String paymentHistory = 'Payment history';
+  static const String noPaymentHistory = 'No payments have been recorded.';
+  static const String openReceipt = 'Open receipt';
+  static const String importStudentsTitle = 'Import students';
+  static const String pickExcelFile = 'Choose Excel file';
+  static const String downloadSampleTemplate = 'Download sample template';
+  static const String importConfirm = 'Import valid rows';
+  static const String importParsing = 'Reading the file…';
+  static const String importInProgress = 'Importing students…';
+  static const String importCompleteTitle = 'Import complete';
+  static const String importXlsNotSupported =
+      'Please save the file as .xlsx and try again.';
+  static const String importNameRequired = 'Full name is required.';
+  static const String importWhatsappRequired =
+      'WhatsApp number is required.';
+  static const String importWhatsappFromPhone =
+      'WhatsApp number was taken from the phone number.';
+  static const String importDobInvalid =
+      'Date of birth could not be understood.';
+  static const String importAgeInvalid =
+      'Age must be a whole number from 1 to 100.';
+  static const String importGuardianPhoneDropped =
+      'Guardian phone number was invalid and has been omitted.';
+  static const String importDuplicateInFile =
+      'This row duplicates another row in the file.';
+  static const String importDuplicateExisting =
+      'A student with this name and WhatsApp number already exists.';
+  static const String importFilterValid = 'Valid';
+  static const String importFilterWarnings = 'Warnings';
+  static const String importFilterCorrection = 'Needs correction';
+  static const String importFilterDuplicates = 'Duplicates';
+  static const String importSummaryImported = 'Imported';
+  static const String importSummarySkipped = 'Skipped';
+  static const String importSummaryFailed = 'Failed';
+  static const String importNoValidRows =
+      'No valid rows are available to import.';
+  static const String batchFeeLabel = 'Batch fee';
   static const String continueWithGoogle = 'Continue with Google';
   static const String signInTitle = 'Sign in';
   static const String signInSubtitle =

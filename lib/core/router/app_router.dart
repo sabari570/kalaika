@@ -22,6 +22,12 @@ import 'package:feemanager/features/branches/presentation/pages/branch_form_page
 import 'package:feemanager/features/branches/presentation/pages/branches_page.dart';
 import 'package:feemanager/features/dashboard/presentation/pages/dashboard_placeholder_page.dart';
 import 'package:feemanager/features/settings/presentation/pages/settings_placeholder_page.dart';
+import 'package:feemanager/features/students/presentation/cubit/import_students_cubit.dart';
+import 'package:feemanager/features/students/presentation/cubit/student_detail_cubit.dart';
+import 'package:feemanager/features/students/presentation/cubit/student_form_cubit.dart';
+import 'package:feemanager/features/students/presentation/pages/import_students_page.dart';
+import 'package:feemanager/features/students/presentation/pages/student_detail_page.dart';
+import 'package:feemanager/features/students/presentation/pages/student_form_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -194,6 +200,87 @@ GoRouter createAppRouter() {
                       return cubit;
                     },
                     child: const BatchFormPage(isEditing: true),
+                  );
+                },
+              ),
+              GoRoute(
+                path: 'students/new',
+                parentNavigatorKey: rootKey,
+                builder: (context, state) {
+                  final branchId = state.pathParameters['branchId']!;
+                  final batchId = state.pathParameters['batchId']!;
+                  return BlocProvider(
+                    create: (_) {
+                      final cubit = sl<StudentFormCubit>();
+                      unawaited(cubit.initCreate(branchId, batchId));
+                      return cubit;
+                    },
+                    child: const StudentFormPage(isEditing: false),
+                  );
+                },
+              ),
+              GoRoute(
+                path: 'students/:studentId',
+                parentNavigatorKey: rootKey,
+                builder: (context, state) {
+                  final branchId = state.pathParameters['branchId']!;
+                  final batchId = state.pathParameters['batchId']!;
+                  final studentId = state.pathParameters['studentId']!;
+                  return BlocProvider(
+                    create: (_) {
+                      final cubit = sl<StudentDetailCubit>();
+                      unawaited(
+                        cubit.started(branchId, batchId, studentId),
+                      );
+                      return cubit;
+                    },
+                    child: StudentDetailPage(
+                      branchId: branchId,
+                      batchId: batchId,
+                      studentId: studentId,
+                    ),
+                  );
+                },
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: 'edit',
+                    parentNavigatorKey: rootKey,
+                    builder: (context, state) {
+                      final branchId = state.pathParameters['branchId']!;
+                      final batchId = state.pathParameters['batchId']!;
+                      final studentId = state.pathParameters['studentId']!;
+                      return BlocProvider(
+                        create: (_) {
+                          final cubit = sl<StudentFormCubit>();
+                          unawaited(
+                            cubit.initEdit(branchId, batchId, studentId),
+                          );
+                          return cubit;
+                        },
+                        child: const StudentFormPage(isEditing: true),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              GoRoute(
+                path: 'import',
+                parentNavigatorKey: rootKey,
+                builder: (context, state) {
+                  final branchId = state.pathParameters['branchId']!;
+                  final batchId = state.pathParameters['batchId']!;
+                  final defaultFee = state.extra as int? ?? 0;
+                  return BlocProvider(
+                    create: (_) {
+                      final cubit = sl<ImportStudentsCubit>()
+                        ..started(
+                          branchId: branchId,
+                          batchId: batchId,
+                          defaultFee: defaultFee,
+                        );
+                      return cubit;
+                    },
+                    child: const ImportStudentsPage(),
                   );
                 },
               ),

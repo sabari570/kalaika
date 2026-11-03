@@ -72,4 +72,28 @@ abstract final class AppRoutes {
   /// Builds a batch edit path.
   static String batchEditPath(String branchId, String batchId) =>
       '/branches/$branchId/batches/$batchId/edit';
+
+  /// Builds a new student path.
+  static String studentNewPath(String branchId, String batchId) =>
+      '/branches/$branchId/batches/$batchId/students/new';
+
+  /// Builds a student detail path.
+  static String studentDetailPath(
+    String branchId,
+    String batchId,
+    String studentId,
+  ) =>
+      '/branches/$branchId/batches/$batchId/students/$studentId';
+
+  /// Builds a student edit path.
+  static String studentEditPath(
+    String branchId,
+    String batchId,
+    String studentId,
+  ) =>
+      '/branches/$branchId/batches/$batchId/students/$studentId/edit';
+
+  /// Builds the Excel import path.
+  static String importStudentsPath(String branchId, String batchId) =>
+      '/branches/$branchId/batches/$batchId/import';
 }

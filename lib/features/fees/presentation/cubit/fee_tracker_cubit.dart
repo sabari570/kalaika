@@ -1,0 +1,208 @@
+import 'dart:async';
+
+import 'package:feemanager/core/constants/app_strings.dart';
+import 'package:feemanager/core/constants/firestore_keys.dart';
+import 'package:feemanager/core/error/failure.dart';
+import 'package:feemanager/core/error/result.dart';
+import 'package:feemanager/core/session/fee_month_session.dart';
+import 'package:feemanager/core/utils/month_key_utils.dart';
+import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
+import 'package:feemanager/features/fees/domain/entities/payment.dart';
+import 'package:feemanager/features/fees/domain/usecases/debug_create_paid_payment.dart';
+import 'package:feemanager/features/fees/domain/usecases/watch_monthly_fees.dart';
+import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_state.dart';
+import 'package:feemanager/features/students/domain/entities/student.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+/// Monthly fee list with dual Firestore listeners.
+class FeeTrackerCubit extends Cubit<FeeTrackerState> {
+  /// Creates the cubit.
+  FeeTrackerCubit({
+    required this._watchActiveStudents,
+    required this._watchMonthlyPayments,
+    required this._debugCreatePaidPayment,
+  }) : super(const FeeTrackerLoading());
+
+  final WatchActiveStudentsForFees _watchActiveStudents;
+  final WatchMonthlyPayments _watchMonthlyPayments;
+  final DebugCreatePaidPayment _debugCreatePaidPayment;
+
+  StreamSubscription<List<Student>>? _studentsSubscription;
+  StreamSubscription<List<Payment>>? _paymentsSubscription;
+
+  String? _branchId;
+  String? _batchId;
+  int _batchDefaultFee = 0;
+  List<Student> _students = <Student>[];
+  List<Payment> _payments = <Payment>[];
+  DateTime _selectedMonth = FeeMonthSession.current();
+  String _searchQuery = '';
+  FeeListFilter _filter = FeeListFilter.all;
+
+  /// Starts listeners for the batch fee tab.
+  void started({
+    required String branchId,
+    required String batchId,
+    required int batchDefaultFee,
+  }) {
+    _branchId = branchId;
+    _batchId = batchId;
+    _batchDefaultFee = batchDefaultFee;
+    _selectedMonth = FeeMonthSession.current();
+    _students = <Student>[];
+    _payments = <Payment>[];
+    emit(const FeeTrackerLoading());
+    unawaited(_studentsSubscription?.cancel());
+    _studentsSubscription = _watchActiveStudents(
+      WatchFeesParams(branchId: branchId, batchId: batchId),
+    ).listen(
+      (students) {
+        _students = students;
+        _emitCombined();
+      },
+      onError: (_) => emit(const FeeTrackerFailure(AppStrings.unknownError)),
+    );
+    _listenPayments();
+  }
+
+  /// Updates the selected month and swaps the payments listener only.
+  void monthChanged(DateTime month) {
+    _selectedMonth = DateTime(month.year, month.month);
+    FeeMonthSession.save(_selectedMonth);
+    _listenPayments();
+  }
+
+  void searchChanged(String query) {
+    _searchQuery = query.trim().toLowerCase();
+    _emitCombined();
+  }
+
+  void filterChanged(FeeListFilter filter) {
+    _filter = filter;
+    _emitCombined();
+  }
+
+  /// Debug-only: records a paid payment for an unpaid row.
+  Future<Result<void>> debugRecordPayment(FeeRow row) async {
+    final branchId = _branchId;
+    final batchId = _batchId;
+    if (branchId == null || batchId == null) {
+      return const Err<void>(ValidationFailure(AppStrings.unknownError));
+    }
+    if (row.displayStatus != FeeRowStatus.unpaid) {
+      return const Success<void>(null);
+    }
+    final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
+    return _debugCreatePaidPayment(
+      DebugCreatePaidPaymentParams(
+        branchId: branchId,
+        batchId: batchId,
+        student: row.student,
+        monthKey: monthKey,
+        batchDefaultFee: _batchDefaultFee,
+      ),
+    );
+  }
+
+  void _listenPayments() {
+    final branchId = _branchId;
+    final batchId = _batchId;
+    if (branchId == null || batchId == null) {
+      return;
+    }
+    final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
+    unawaited(_paymentsSubscription?.cancel());
+    _paymentsSubscription = _watchMonthlyPayments(
+      WatchMonthlyPaymentsParams(
+        branchId: branchId,
+        batchId: batchId,
+        monthKey: monthKey,
+      ),
+    ).listen(
+      (payments) {
+        _payments = payments;
+        _emitCombined();
+      },
+      onError: (_) => emit(const FeeTrackerFailure(AppStrings.unknownError)),
+    );
+  }
+
+  void _emitCombined() {
+    final paymentByStudent = <String, Payment>{
+      for (final payment in _payments) payment.studentId: payment,
+    };
+    final rows = _students.map((student) {
+      final payment = paymentByStudent[student.id];
+      final status = _statusFor(payment);
+      return FeeRow(
+        student: student,
+        payment: payment,
+        displayStatus: status,
+        amount: payment?.amount ?? student.monthlyFee,
+      );
+    }).toList();
+    var paidCount = 0;
+    var collected = 0;
+    for (final row in rows) {
+      if (row.displayStatus != FeeRowStatus.unpaid) {
+        paidCount++;
+        collected += row.amount;
+      }
+    }
+    final filtered = _applyFilters(rows);
+    emit(
+      FeeTrackerLoaded(
+        selectedMonth: _selectedMonth,
+        rows: rows,
+        filteredRows: filtered,
+        paidCount: paidCount,
+        totalCount: rows.length,
+        collected: collected,
+        searchQuery: _searchQuery,
+        filter: _filter,
+        monthKey: MonthKeyUtils.toMonthKey(_selectedMonth),
+      ),
+    );
+  }
+
+  List<FeeRow> _applyFilters(List<FeeRow> rows) {
+    return rows.where((row) {
+      if (_filter == FeeListFilter.unpaid &&
+          row.displayStatus != FeeRowStatus.unpaid) {
+        return false;
+      }
+      if (_filter == FeeListFilter.pendingSend &&
+          row.displayStatus != FeeRowStatus.pendingSend) {
+        return false;
+      }
+      if (_filter == FeeListFilter.sent &&
+          row.displayStatus != FeeRowStatus.sent) {
+        return false;
+      }
+      if (_searchQuery.isEmpty) {
+        return true;
+      }
+      final name = row.student.fullName.toLowerCase();
+      final guardian = row.student.guardianName?.toLowerCase() ?? '';
+      return name.contains(_searchQuery) || guardian.contains(_searchQuery);
+    }).toList();
+  }
+
+  FeeRowStatus _statusFor(Payment? payment) {
+    if (payment == null) {
+      return FeeRowStatus.unpaid;
+    }
+    return switch (payment.status) {
+      FirestoreKeys.statusSent => FeeRowStatus.sent,
+      FirestoreKeys.statusPaid => FeeRowStatus.pendingSend,
+      _ => FeeRowStatus.unpaid,
+    };
+  }
+
+  @override
+  Future<void> close() {
+    unawaited(_studentsSubscription?.cancel());
+    unawaited(_paymentsSubscription?.cancel());
+    return super.close();
+  }
+}

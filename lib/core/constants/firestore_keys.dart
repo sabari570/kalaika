@@ -58,6 +58,7 @@ abstract final class FirestoreKeys {
 
   /// Payment collection segment.
   static const String payments = 'payments';
+  static const String batchId = 'batchId';
   static const String studentId = 'studentId';
   static const String studentName = 'studentName';
   static const String month = 'month';

@@ -1,0 +1,57 @@
+/// Central route path constants for go_router.
+abstract final class AppRoutes {
+  /// Splash screen.
+  static const String splash = '/splash';
+
+  /// Google sign-in screen.
+  static const String login = '/login';
+
+  /// Home shell redirect target.
+  static const String home = '/home';
+
+  /// Dashboard tab.
+  static const String dashboard = '/home/dashboard';
+
+  /// Branches tab.
+  static const String branches = '/home/branches';
+
+  /// Settings tab.
+  static const String settings = '/home/settings';
+
+  /// Debug-only design system gallery.
+  static const String styleGuide = '/debug/style-guide';
+
+  /// Create branch form.
+  static const String branchNew = '/branches/new';
+
+  /// Branch detail and batch list.
+  static const String branchDetail = '/branches/:branchId';
+
+  /// Edit branch form.
+  static const String branchEdit = '/branches/:branchId/edit';
+
+  /// Create batch form.
+  static const String batchNew = '/branches/:branchId/batches/new';
+
+  /// Batch fee tracker and students.
+  static const String batchDetail = '/branches/:branchId/batches/:batchId';
+
+  /// Edit batch form.
+  static const String batchEdit = '/branches/:branchId/batches/:batchId/edit';
+
+  /// Add student form.
+  static const String studentNew =
+      '/branches/:branchId/batches/:batchId/students/new';
+
+  /// Student detail.
+  static const String studentDetail =
+      '/branches/:branchId/batches/:batchId/students/:studentId';
+
+  /// Edit student form.
+  static const String studentEdit =
+      '/branches/:branchId/batches/:batchId/students/:studentId/edit';
+
+  /// Excel import flow.
+  static const String importStudents =
+      '/branches/:branchId/batches/:batchId/import';
+}

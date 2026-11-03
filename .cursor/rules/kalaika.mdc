@@ -1,0 +1,9 @@
+---
+description: Kalaika project rules
+alwaysApply: true
+---
+- The source of truth is docs/KALAIKA_PLAN_v2.md. Read the relevant sections before changing code.
+- Follow the architecture and coding standards in Section 2 of the plan.
+- Use only free and open-source packages. Do not write tests. No emojis anywhere.
+- All UI text is formal; all fonts come from google_fonts; colors come from AppColors.
+- Use `fvm flutter` and `fvm dart` for every command, and run `fvm flutter analyze` after changes.

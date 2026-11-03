@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "79708081257",
+    "project_id": "kalaika",
+    "storage_bucket": "kalaika.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:79708081257:android:c07c3dc62cf138267566f8",
+        "android_client_info": {
+          "package_name": "com.kalaika.feemanager"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCLfuazn21-0RtaNWUQh8q0l4Gx4C6xXDI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -33,6 +33,52 @@ abstract final class AppStrings {
   static const String delete = 'Delete';
   static const String edit = 'Edit';
   static const String createBranch = 'Create branch';
+  static const String newBranch = 'New branch';
+  static const String editBranch = 'Edit branch';
+  static const String branchName = 'Branch name';
+  static const String branchLocation = 'Location or address';
+  static const String branchContact = 'Contact number';
+  static const String branchNameRequired = 'Branch name is required.';
+  static const String branchNotFound = 'The branch could not be found.';
+  static const String cannotDeleteBranchWithBatches =
+      'This branch cannot be deleted while it contains batches.';
+  static const String deleteBranchConfirm =
+      'This branch will be removed permanently.';
+  static const String batchesLabel = 'Batches';
+  static const String studentsLabel = 'Students';
+  static const String newBatch = 'New batch';
+  static const String editBatch = 'Edit batch';
+  static const String batchName = 'Batch name';
+  static const String danceStyle = 'Dance style';
+  static const String classMode = 'Class mode';
+  static const String classDays = 'Class days';
+  static const String classTime = 'Class time';
+  static const String monthlyFee = 'Monthly fee per student';
+  static const String batchFeeHelper =
+      'This amount is used by default when recording each '
+      "student's monthly payment.";
+  static const String batchNameRequired = 'Batch name is required.';
+  static const String batchFeeInvalid =
+      'Monthly fee must be a positive whole number.';
+  static const String batchNotFound = 'The batch could not be found.';
+  static const String cannotDeleteBatchWithStudents =
+      'This batch cannot be deleted while it contains students. '
+      'You may deactivate it instead.';
+  static const String deactivateBatch = 'Deactivate batch';
+  static const String deactivateBatchConfirm =
+      'The batch will be hidden from the fee tracker. Existing '
+      'student records are retained.';
+  static const String deleteBatchConfirm =
+      'This batch will be removed permanently.';
+  static const String batchFeeChangeTitle = 'Update batch fee';
+  static const String batchFeeChangeMessage =
+      'Choose how the updated fee should apply to students in '
+      'this batch.';
+  static const String applyFeeNewStudentsOnly = 'Apply to new students only';
+  static const String applyFeeAllStudents = 'Apply to all active students';
+  static const String batchDetailPlaceholder =
+      'Fee tracking and student management will be available in '
+      'the next milestone.';
   static const String continueWithGoogle = 'Continue with Google';
   static const String signInTitle = 'Sign in';
   static const String signInSubtitle =
@@ -48,6 +94,7 @@ abstract final class AppStrings {
 
   /// Empty states.
   static const String noBranchesYet = 'No branches have been created.';
+  static const String noBatchesYet = 'No batches have been created.';
 
   /// Status chip labels.
   static const String statusUnpaid = 'Unpaid';

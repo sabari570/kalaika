@@ -1,10 +1,11 @@
 import 'dart:async';
 
 import 'package:feemanager/core/constants/app_durations.dart';
+import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/usecase/usecase.dart';
 import 'package:feemanager/features/auth/domain/repositories/auth_repository.dart';
-import 'package:feemanager/features/auth/domain/usecases/auth_usecases.dart';
+import 'package:feemanager/features/auth/domain/usecases/initialize_auth.dart';
 import 'package:feemanager/features/auth/presentation/cubit/splash_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -31,7 +32,10 @@ class SplashCubit extends Cubit<SplashState> {
       case Success<void>():
         break;
       case Err<void>(:final failure):
-        emit(SplashInitFailed(failure.message));
+        final message = failure.message.isEmpty
+            ? AppStrings.firebaseInitFailed
+            : failure.message;
+        emit(SplashInitFailed(message));
         return;
     }
 

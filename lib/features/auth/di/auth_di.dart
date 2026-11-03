@@ -2,7 +2,10 @@ import 'package:feemanager/core/di/service_locator.dart';
 import 'package:feemanager/features/auth/data/datasources/auth_remote_datasource.dart';
 import 'package:feemanager/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:feemanager/features/auth/domain/repositories/auth_repository.dart';
-import 'package:feemanager/features/auth/domain/usecases/auth_usecases.dart';
+import 'package:feemanager/features/auth/domain/usecases/initialize_auth.dart';
+import 'package:feemanager/features/auth/domain/usecases/sign_in_with_google.dart';
+import 'package:feemanager/features/auth/domain/usecases/sign_out.dart';
+import 'package:feemanager/features/auth/domain/usecases/watch_auth_user.dart';
 import 'package:feemanager/features/auth/presentation/cubit/login_cubit.dart';
 import 'package:feemanager/features/auth/presentation/cubit/splash_cubit.dart';
 

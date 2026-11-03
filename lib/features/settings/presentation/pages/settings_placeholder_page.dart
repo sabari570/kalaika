@@ -9,7 +9,7 @@ import 'package:feemanager/core/usecase/usecase.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/confirm_dialog.dart';
 import 'package:feemanager/core/widgets/outlined_copper_button.dart';
-import 'package:feemanager/features/auth/domain/usecases/auth_usecases.dart';
+import 'package:feemanager/features/auth/domain/usecases/sign_out.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';

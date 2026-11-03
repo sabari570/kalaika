@@ -54,4 +54,22 @@ abstract final class AppRoutes {
   /// Excel import flow.
   static const String importStudents =
       '/branches/:branchId/batches/:batchId/import';
+
+  /// Builds a branch detail path for [branchId].
+  static String branchDetailPath(String branchId) => '/branches/$branchId';
+
+  /// Builds a branch edit path for [branchId].
+  static String branchEditPath(String branchId) => '/branches/$branchId/edit';
+
+  /// Builds a new batch path under [branchId].
+  static String batchNewPath(String branchId) =>
+      '/branches/$branchId/batches/new';
+
+  /// Builds a batch detail path.
+  static String batchDetailPath(String branchId, String batchId) =>
+      '/branches/$branchId/batches/$batchId';
+
+  /// Builds a batch edit path.
+  static String batchEditPath(String branchId, String batchId) =>
+      '/branches/$branchId/batches/$batchId/edit';
 }

@@ -16,6 +16,13 @@ abstract final class ExceptionMapper {
     if (error is AuthFailure) {
       return error;
     }
+    if (error is StateError) {
+      final message = error.message;
+      if (message.isEmpty) {
+        return const ValidationFailure(AppStrings.unknownError);
+      }
+      return ValidationFailure(message);
+    }
     return const UnknownFailure(AppStrings.unknownError);
   }
 

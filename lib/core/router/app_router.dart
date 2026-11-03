@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:feemanager/core/constants/app_durations.dart';
 import 'package:feemanager/core/constants/app_routes.dart';
 import 'package:feemanager/core/debug/style_guide_page.dart';
@@ -9,7 +11,15 @@ import 'package:feemanager/features/auth/presentation/cubit/login_cubit.dart';
 import 'package:feemanager/features/auth/presentation/cubit/splash_cubit.dart';
 import 'package:feemanager/features/auth/presentation/pages/login_page.dart';
 import 'package:feemanager/features/auth/presentation/pages/splash_page.dart';
-import 'package:feemanager/features/branches/presentation/pages/branches_placeholder_page.dart';
+import 'package:feemanager/features/batches/presentation/cubit/batch_form_cubit.dart';
+import 'package:feemanager/features/batches/presentation/pages/batch_detail_page.dart';
+import 'package:feemanager/features/batches/presentation/pages/batch_form_page.dart';
+import 'package:feemanager/features/branches/presentation/cubit/branch_detail_cubit.dart';
+import 'package:feemanager/features/branches/presentation/cubit/branch_form_cubit.dart';
+import 'package:feemanager/features/branches/presentation/cubit/branch_list_cubit.dart';
+import 'package:feemanager/features/branches/presentation/pages/branch_detail_page.dart';
+import 'package:feemanager/features/branches/presentation/pages/branch_form_page.dart';
+import 'package:feemanager/features/branches/presentation/pages/branches_page.dart';
 import 'package:feemanager/features/dashboard/presentation/pages/dashboard_placeholder_page.dart';
 import 'package:feemanager/features/settings/presentation/pages/settings_placeholder_page.dart';
 import 'package:flutter/foundation.dart';
@@ -80,7 +90,10 @@ GoRouter createAppRouter() {
                 pageBuilder: (context, state) {
                   return _fadePage(
                     state,
-                    const BranchesPlaceholderPage(),
+                    BlocProvider(
+                      create: (_) => sl<BranchListCubit>()..started(),
+                      child: const BranchesPage(),
+                    ),
                   );
                 },
               ),
@@ -94,6 +107,93 @@ GoRouter createAppRouter() {
                   return _fadePage(
                     state,
                     const SettingsPlaceholderPage(),
+                  );
+                },
+              ),
+            ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.branchNew,
+        parentNavigatorKey: rootKey,
+        builder: (context, state) {
+          return BlocProvider(
+            create: (_) => sl<BranchFormCubit>()..initCreate(),
+            child: const BranchFormPage(isEditing: false),
+          );
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.branchDetail,
+        parentNavigatorKey: rootKey,
+        builder: (context, state) {
+          final branchId = state.pathParameters['branchId']!;
+          return BlocProvider(
+            create: (_) {
+              final cubit = sl<BranchDetailCubit>();
+              unawaited(cubit.started(branchId));
+              return cubit;
+            },
+            child: BranchDetailPage(branchId: branchId),
+          );
+        },
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'edit',
+            parentNavigatorKey: rootKey,
+            builder: (context, state) {
+              final branchId = state.pathParameters['branchId']!;
+          return BlocProvider(
+            create: (_) {
+              final cubit = sl<BranchFormCubit>();
+              unawaited(cubit.initEdit(branchId));
+              return cubit;
+            },
+            child: const BranchFormPage(isEditing: true),
+          );
+            },
+          ),
+          GoRoute(
+            path: 'batches/new',
+            parentNavigatorKey: rootKey,
+            builder: (context, state) {
+              final branchId = state.pathParameters['branchId']!;
+              return BlocProvider(
+                create: (_) {
+                  final cubit = sl<BatchFormCubit>();
+                  unawaited(cubit.initCreate(branchId));
+                  return cubit;
+                },
+                child: const BatchFormPage(isEditing: false),
+              );
+            },
+          ),
+          GoRoute(
+            path: 'batches/:batchId',
+            parentNavigatorKey: rootKey,
+            builder: (context, state) {
+              final branchId = state.pathParameters['branchId']!;
+              final batchId = state.pathParameters['batchId']!;
+              return BatchDetailPage(
+                branchId: branchId,
+                batchId: batchId,
+              );
+            },
+            routes: <RouteBase>[
+              GoRoute(
+                path: 'edit',
+                parentNavigatorKey: rootKey,
+                builder: (context, state) {
+                  final branchId = state.pathParameters['branchId']!;
+                  final batchId = state.pathParameters['batchId']!;
+                  return BlocProvider(
+                    create: (_) {
+                      final cubit = sl<BatchFormCubit>();
+                      unawaited(cubit.initEdit(branchId, batchId));
+                      return cubit;
+                    },
+                    child: const BatchFormPage(isEditing: true),
                   );
                 },
               ),

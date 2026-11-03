@@ -1,7 +1,7 @@
 import 'package:feemanager/core/error/failure.dart';
 import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/usecase/usecase.dart';
-import 'package:feemanager/features/auth/domain/usecases/auth_usecases.dart';
+import 'package:feemanager/features/auth/domain/usecases/sign_in_with_google.dart';
 import 'package:feemanager/features/auth/presentation/cubit/login_state.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 

@@ -38,6 +38,7 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
   DateTime _selectedMonth = FeeMonthSession.current();
   String _searchQuery = '';
   FeeListFilter _filter = FeeListFilter.all;
+  var _debugRecording = false;
 
   /// Starts listeners for the batch fee tab.
   void started({
@@ -45,14 +46,39 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
     required String batchId,
     required int batchDefaultFee,
   }) {
+    final sameBatch = _branchId == branchId && _batchId == batchId;
     _branchId = branchId;
     _batchId = batchId;
     _batchDefaultFee = batchDefaultFee;
-    _selectedMonth = FeeMonthSession.current();
-    _students = <Student>[];
-    _payments = <Payment>[];
-    emit(const FeeTrackerLoading());
+    if (!sameBatch) {
+      _selectedMonth = FeeMonthSession.current();
+      _students = <Student>[];
+      _payments = <Payment>[];
+      _searchQuery = '';
+      _filter = FeeListFilter.all;
+      emit(const FeeTrackerLoading());
+    }
+    attachListeners();
+  }
+
+  /// Cancels Firestore listeners while keeping in-memory state.
+  void detachListeners() {
     unawaited(_studentsSubscription?.cancel());
+    unawaited(_paymentsSubscription?.cancel());
+    _studentsSubscription = null;
+    _paymentsSubscription = null;
+  }
+
+  /// Attaches the two fee tracker listeners.
+  void attachListeners() {
+    final branchId = _branchId;
+    final batchId = _batchId;
+    if (branchId == null || batchId == null) {
+      return;
+    }
+    if (_studentsSubscription != null) {
+      return;
+    }
     _studentsSubscription = _watchActiveStudents(
       WatchFeesParams(branchId: branchId, batchId: batchId),
     ).listen(
@@ -84,6 +110,9 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
 
   /// Debug-only: records a paid payment for an unpaid row.
   Future<Result<void>> debugRecordPayment(FeeRow row) async {
+    if (_debugRecording) {
+      return const Success<void>(null);
+    }
     final branchId = _branchId;
     final batchId = _batchId;
     if (branchId == null || batchId == null) {
@@ -92,16 +121,21 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
     if (row.displayStatus != FeeRowStatus.unpaid) {
       return const Success<void>(null);
     }
-    final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
-    return _debugCreatePaidPayment(
-      DebugCreatePaidPaymentParams(
-        branchId: branchId,
-        batchId: batchId,
-        student: row.student,
-        monthKey: monthKey,
-        batchDefaultFee: _batchDefaultFee,
-      ),
-    );
+    _debugRecording = true;
+    try {
+      final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
+      return await _debugCreatePaidPayment(
+        DebugCreatePaidPaymentParams(
+          branchId: branchId,
+          batchId: batchId,
+          student: row.student,
+          monthKey: monthKey,
+          batchDefaultFee: _batchDefaultFee,
+        ),
+      );
+    } finally {
+      _debugRecording = false;
+    }
   }
 
   void _listenPayments() {

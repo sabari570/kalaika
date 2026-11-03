@@ -90,8 +90,17 @@ abstract final class AppStrings {
       'No students match the current filter.';
   static const String sendReceipt = 'Send';
   static const String recordPayment = 'Record payment';
+  static const String recordPaymentConfirmIntro =
+      'You are about to mark the following class fee as paid.';
+  static const String recordPaymentAmountLine = 'Amount: Rs. {amount}';
+  static const String recordPaymentMonthLine = 'Month: {month}';
+  static const String recordPaymentIrreversible =
+      'This action is irreversible. Once confirmed, a payment record '
+      'will be created for this month.';
+  static const String confirmPayment = 'Confirm payment';
   static const String debugCreatePayment =
-      'Debug payment recorded for testing.';
+      'Tap an unpaid checkbox to record a debug payment for testing.';
+  static const String statusSentOn = 'Sent on {date}';
   static const String addStudent = 'Add student';
   static const String importFromExcel = 'Import from Excel';
   static const String editStudent = 'Edit student';

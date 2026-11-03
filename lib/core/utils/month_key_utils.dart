@@ -1,4 +1,4 @@
-/// Month keys for fee tracking (device local calendar).
+/// Month keys for fee tracking (Asia/Kolkata calendar months).
 abstract final class MonthKeyUtils {
   /// Formats [month] as `yyyy-MM` for payment documents.
   static String toMonthKey(DateTime month) {

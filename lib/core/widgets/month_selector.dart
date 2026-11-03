@@ -33,6 +33,15 @@ class _MonthSelectorState extends State<MonthSelector> {
     _month = DateTime(widget.initialMonth.year, widget.initialMonth.month);
   }
 
+  @override
+  void didUpdateWidget(MonthSelector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final next = DateTime(widget.initialMonth.year, widget.initialMonth.month);
+    if (next.year != _month.year || next.month != _month.month) {
+      _month = next;
+    }
+  }
+
   void _shift(int delta) {
     final next = DateTime(_month.year, _month.month + delta);
     setState(() => _month = next);

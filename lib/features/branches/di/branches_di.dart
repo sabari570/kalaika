@@ -6,6 +6,7 @@ import 'package:feemanager/features/batches/domain/usecases/create_batch.dart';
 import 'package:feemanager/features/batches/domain/usecases/deactivate_batch.dart';
 import 'package:feemanager/features/batches/domain/usecases/delete_batch.dart';
 import 'package:feemanager/features/batches/domain/usecases/get_batch.dart';
+import 'package:feemanager/features/batches/domain/usecases/reconcile_student_counters.dart';
 import 'package:feemanager/features/batches/domain/usecases/update_batch.dart';
 import 'package:feemanager/features/batches/domain/usecases/watch_batches.dart';
 import 'package:feemanager/features/batches/presentation/cubit/batch_form_cubit.dart';
@@ -47,6 +48,9 @@ void configureBranchesDependencies() {
     ..registerLazySingleton(() => UpdateBatch(sl<BatchRepository>()))
     ..registerLazySingleton(() => DeleteBatch(sl<BatchRepository>()))
     ..registerLazySingleton(() => DeactivateBatch(sl<BatchRepository>()))
+    ..registerLazySingleton(
+      () => ReconcileStudentCounters(sl<BatchRepository>()),
+    )
     ..registerFactory(
       () => BranchListCubit(
         watchBranches: sl<WatchBranches>(),
@@ -64,6 +68,7 @@ void configureBranchesDependencies() {
       () => BranchDetailCubit(
         getBranch: sl<GetBranch>(),
         watchBatches: sl<WatchBatches>(),
+        reconcileStudentCounters: sl<ReconcileStudentCounters>(),
       ),
     )
     ..registerFactory(

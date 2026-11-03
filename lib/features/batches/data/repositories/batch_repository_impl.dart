@@ -77,4 +77,14 @@ class BatchRepositoryImpl implements BatchRepository {
       return Err<void>(ExceptionMapper.map(error, stackTrace));
     }
   }
+
+  @override
+  Future<Result<void>> reconcileStudentCounters(String branchId) async {
+    try {
+      await _remoteDataSource.reconcileStudentCounters(branchId);
+      return const Success<void>(null);
+    } on Object catch (error, stackTrace) {
+      return Err<void>(ExceptionMapper.map(error, stackTrace));
+    }
+  }
 }

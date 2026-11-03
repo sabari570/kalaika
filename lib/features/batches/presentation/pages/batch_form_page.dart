@@ -217,9 +217,12 @@ class _BatchFormPageState extends State<BatchFormPage> {
                 ? const Center(child: CircularProgressIndicator())
                 : SafeArea(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.screenHorizontal,
-                        vertical: AppSpacing.lg,
+                      padding: EdgeInsets.fromLTRB(
+                        AppSpacing.screenHorizontal,
+                        AppSpacing.lg,
+                        AppSpacing.screenHorizontal,
+                        AppSpacing.lg +
+                            MediaQuery.viewInsetsOf(context).bottom,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,

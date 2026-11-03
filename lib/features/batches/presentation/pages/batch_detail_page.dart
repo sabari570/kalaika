@@ -112,8 +112,7 @@ class _BatchDetailScopeState extends State<_BatchDetailScope> {
   void initState() {
     super.initState();
     _feeTrackerCubit = sl<FeeTrackerCubit>();
-    _studentListCubit = sl<StudentListCubit>()
-      ..started(widget.branchId, widget.batchId);
+    _studentListCubit = sl<StudentListCubit>();
   }
 
   @override
@@ -156,16 +155,43 @@ class _BatchDetailScaffoldState extends State<_BatchDetailScaffold> {
   @override
   void initState() {
     super.initState();
+    widget.tabController.addListener(_onTabChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
       }
-      context.read<FeeTrackerCubit>().started(
-        branchId: widget.branchId,
-        batchId: widget.batchId,
-        batchDefaultFee: widget.batch.defaultFee,
-      );
+      _syncListenersForTab(widget.tabController.index);
     });
+  }
+
+  @override
+  void dispose() {
+    widget.tabController.removeListener(_onTabChanged);
+    super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (widget.tabController.indexIsChanging) {
+      return;
+    }
+    _syncListenersForTab(widget.tabController.index);
+  }
+
+  void _syncListenersForTab(int index) {
+    final branchId = widget.branchId;
+    final batchId = widget.batchId;
+    final batch = widget.batch;
+    if (index == 0) {
+      context.read<StudentListCubit>().stopListening();
+      context.read<FeeTrackerCubit>().started(
+        branchId: branchId,
+        batchId: batchId,
+        batchDefaultFee: batch.defaultFee,
+      );
+      return;
+    }
+    context.read<FeeTrackerCubit>().detachListeners();
+    context.read<StudentListCubit>().started(branchId, batchId);
   }
 
   @override
@@ -174,6 +200,7 @@ class _BatchDetailScaffoldState extends State<_BatchDetailScaffold> {
     final branchId = widget.branchId;
     final batchId = widget.batchId;
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: Text(batch.name),
         bottom: TabBar(

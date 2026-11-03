@@ -121,7 +121,10 @@ class _StatusControl extends StatelessWidget {
             status: FeeDisplayStatus.sent,
             sentLabel: sentAt == null
                 ? AppStrings.statusSent
-                : 'Sent on ${DateFormat('d MMM').format(sentAt!)}',
+                : AppStrings.statusSentOn.replaceFirst(
+                    '{date}',
+                    DateFormat('d MMM').format(sentAt!),
+                  ),
           ),
         ],
       ),

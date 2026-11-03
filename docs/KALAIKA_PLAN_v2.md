@@ -521,6 +521,7 @@ Deny all client reads and writes. Receipts are written by the Cloud Function thr
 - Collection group `payments`: `ownerId`, `month`, `status` (all ascending)
 - Collection group `batches`: single-field index on `ownerId` with collection group scope
 - `payments` within a batch: `studentId` ascending, `month` descending
+- `students` within a batch: `isActive` ascending, `fullName` ascending
 
 ---
 

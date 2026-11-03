@@ -12,6 +12,7 @@ import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_cubit.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_state.dart';
 import 'package:feemanager/features/fees/presentation/widgets/fee_row_widget.dart';
+import 'package:feemanager/features/fees/presentation/widgets/record_payment_confirm_dialog.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -82,108 +83,147 @@ class _FeeTrackerBody extends StatelessWidget {
       state.collected,
     );
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.screenHorizontal,
-          ),
-          child: MonthSelector(
-            initialMonth: state.selectedMonth,
-            onChanged: context.read<FeeTrackerCubit>().monthChanged,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.screenHorizontal,
-            AppSpacing.md,
-            AppSpacing.screenHorizontal,
-            AppSpacing.sm,
-          ),
+    return CustomScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      slivers: <Widget>[
+        SliverToBoxAdapter(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              Text(
-                'Paid ${state.paidCount} of ${state.totalCount}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                AppStrings.feeCollected.replaceFirst(
-                  '{amount}',
-                  collectedText,
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenHorizontal,
                 ),
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: colors.creamMuted,
+                child: MonthSelector(
+                  initialMonth: state.selectedMonth,
+                  onChanged: context.read<FeeTrackerCubit>().monthChanged,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.screenHorizontal,
+                  AppSpacing.md,
+                  AppSpacing.screenHorizontal,
+                  AppSpacing.sm,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      AppStrings.feePaidOfTotal
+                          .replaceFirst('{paid}', '${state.paidCount}')
+                          .replaceFirst('{total}', '${state.totalCount}'),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      AppStrings.feeCollected.replaceFirst(
+                        '{amount}',
+                        collectedText,
+                      ),
+                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: colors.creamMuted,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        minHeight: 6,
+                        color: colors.copper,
+                        backgroundColor: colors.surfaceHigh,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenHorizontal,
+                ),
+                child: AppTextField(
+                  hint: AppStrings.feeSearchHint,
+                  onChanged: context.read<FeeTrackerCubit>().searchChanged,
                 ),
               ),
               const SizedBox(height: AppSpacing.sm),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 6,
-                  color: colors.copper,
-                  backgroundColor: colors.surfaceHigh,
-                ),
+              _FilterChips(
+                selected: state.filter,
+                onChanged: context.read<FeeTrackerCubit>().filterChanged,
               ),
+              if (kDebugMode)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenHorizontal,
+                    vertical: AppSpacing.xs,
+                  ),
+                  child: Text(
+                    AppStrings.debugCreatePayment,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.creamMuted,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.screenHorizontal,
-          ),
-          child: AppTextField(
-            hint: AppStrings.feeSearchHint,
-            onChanged: context.read<FeeTrackerCubit>().searchChanged,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _FilterChips(
-          selected: state.filter,
-          onChanged: context.read<FeeTrackerCubit>().filterChanged,
-        ),
-        if (kDebugMode)
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.screenHorizontal,
-              vertical: AppSpacing.xs,
+        if (state.filteredRows.isEmpty)
+          const SliverFillRemaining(
+            hasScrollBody: false,
+            child: EmptyState(message: AppStrings.noMatchingFeeRows),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenHorizontal,
+              AppSpacing.sm,
+              AppSpacing.screenHorizontal,
+              AppSpacing.lg,
             ),
-            child: Text(
-              AppStrings.debugCreatePayment,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: colors.creamMuted,
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final row = state.filteredRows[index];
+                  return FeeRowWidget(
+                    row: row,
+                    onUnpaidTap: () => unawaited(
+                      _debugPay(
+                        context,
+                        row,
+                        state.selectedMonth,
+                      ),
+                    ),
+                    onSendTap: () {},
+                  );
+                },
+                childCount: state.filteredRows.length,
               ),
             ),
           ),
-        Expanded(
-          child: state.filteredRows.isEmpty
-              ? const EmptyState(message: AppStrings.noMatchingFeeRows)
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenHorizontal,
-                    vertical: AppSpacing.sm,
-                  ),
-                  itemCount: state.filteredRows.length,
-                  itemBuilder: (context, index) {
-                    final row = state.filteredRows[index];
-                    return FeeRowWidget(
-                      row: row,
-                      onUnpaidTap: () => unawaited(
-                        _debugPay(context, row),
-                      ),
-                      onSendTap: () {},
-                    );
-                  },
-                ),
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: MediaQuery.viewInsetsOf(context).bottom,
+          ),
         ),
       ],
     );
   }
 
-  Future<void> _debugPay(BuildContext context, FeeRow row) async {
+  Future<void> _debugPay(
+    BuildContext context,
+    FeeRow row,
+    DateTime selectedMonth,
+  ) async {
+    final confirmed = await RecordPaymentConfirmDialog.show(
+      context,
+      studentName: row.student.fullName,
+      amount: row.amount,
+      month: selectedMonth,
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
     final result = await context.read<FeeTrackerCubit>().debugRecordPayment(
       row,
     );

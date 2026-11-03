@@ -39,6 +39,46 @@ class BatchRemoteDataSource {
     );
   }
 
+  /// Recomputes student counters on every batch in [branchId] and the branch.
+  Future<void> reconcileStudentCounters(String branchId) async {
+    final uid = FirebaseUserScope.requireUid();
+    final batchesSnap = await _batchesRef(uid, branchId)
+        .where(FirestoreKeys.isActive, isEqualTo: true)
+        .get();
+    var branchStudentTotal = 0;
+    for (final batchDoc in batchesSnap.docs) {
+      branchStudentTotal += await _syncBatchStudentCounters(
+        uid: uid,
+        branchId: branchId,
+        batchId: batchDoc.id,
+      );
+    }
+    await _branchesRef(uid).doc(branchId).update(<String, Object?>{
+      FirestoreKeys.studentCount: branchStudentTotal,
+    });
+  }
+
+  /// Sets batch counters from active students; returns active student count.
+  Future<int> _syncBatchStudentCounters({
+    required String uid,
+    required String branchId,
+    required String batchId,
+  }) async {
+    final studentsSnap = await _studentsRef(uid, branchId, batchId)
+        .where(FirestoreKeys.isActive, isEqualTo: true)
+        .get();
+    var feeTotal = 0;
+    for (final doc in studentsSnap.docs) {
+      feeTotal +=
+          (doc.data()[FirestoreKeys.monthlyFee] as num?)?.toInt() ?? 0;
+    }
+    await _batchesRef(uid, branchId).doc(batchId).update(<String, Object?>{
+      FirestoreKeys.studentCount: studentsSnap.size,
+      FirestoreKeys.expectedMonthlyTotal: feeTotal,
+    });
+    return studentsSnap.size;
+  }
+
   /// Streams active batches for a branch ordered by name.
   Stream<List<Batch>> watchBatches(String branchId) {
     final uid = FirebaseUserScope.requireUid();

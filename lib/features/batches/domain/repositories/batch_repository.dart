@@ -25,4 +25,7 @@ abstract class BatchRepository {
 
   /// Marks a batch inactive when students still exist.
   Future<Result<void>> deactivateBatch(String branchId, String batchId);
+
+  /// Realigns batch and branch student counters with Firestore data.
+  Future<Result<void>> reconcileStudentCounters(String branchId);
 }

@@ -101,21 +101,8 @@ class StudentRemoteDataSource {
     _validateDraft(draft);
     final uid = FirebaseUserScope.requireUid();
     final studentRef = _studentsRef(uid, branchId, batchId).doc();
-    final batchRef = _batchesRef(uid, branchId).doc(batchId);
-    final branchRef = _branchesRef(uid).doc(branchId);
-    await _firestore.runTransaction((transaction) async {
-      transaction
-        ..set(studentRef, StudentModel.createMap(draft))
-        ..update(batchRef, <String, Object?>{
-          FirestoreKeys.studentCount: FieldValue.increment(1),
-          FirestoreKeys.expectedMonthlyTotal: FieldValue.increment(
-            draft.monthlyFee,
-          ),
-        })
-        ..update(branchRef, <String, Object?>{
-          FirestoreKeys.studentCount: FieldValue.increment(1),
-        });
-    });
+    await studentRef.set(StudentModel.createMap(draft));
+    await _syncBatchAndBranchCounters(uid, branchId, batchId);
     final saved = await studentRef.get();
     return StudentModel.fromSnapshot(saved).toEntity();
   }
@@ -156,8 +143,6 @@ class StudentRemoteDataSource {
   }) async {
     final uid = FirebaseUserScope.requireUid();
     final studentRef = _studentsRef(uid, branchId, batchId).doc(studentId);
-    final batchRef = _batchesRef(uid, branchId).doc(batchId);
-    final branchRef = _branchesRef(uid).doc(branchId);
     final snapshot = await studentRef.get();
     if (!snapshot.exists) {
       throw StateError(AppStrings.studentNotFound);
@@ -166,21 +151,10 @@ class StudentRemoteDataSource {
     if (existing.isActive == isActive) {
       return;
     }
-    final delta = isActive ? 1 : -1;
-    final feeDelta = isActive ? existing.monthlyFee : -existing.monthlyFee;
-    await _firestore.runTransaction((transaction) async {
-      transaction
-        ..update(studentRef, <String, Object?>{
-          FirestoreKeys.isActive: isActive,
-        })
-        ..update(batchRef, <String, Object?>{
-          FirestoreKeys.studentCount: FieldValue.increment(delta),
-          FirestoreKeys.expectedMonthlyTotal: FieldValue.increment(feeDelta),
-        })
-        ..update(branchRef, <String, Object?>{
-          FirestoreKeys.studentCount: FieldValue.increment(delta),
-        });
+    await studentRef.update(<String, Object?>{
+      FirestoreKeys.isActive: isActive,
     });
+    await _syncBatchAndBranchCounters(uid, branchId, batchId);
   }
 
   /// Checks duplicate WhatsApp and name in the batch.
@@ -219,8 +193,6 @@ class StudentRemoteDataSource {
     }
     final uid = FirebaseUserScope.requireUid();
     final studentsRef = _studentsRef(uid, branchId, batchId);
-    final batchRef = _batchesRef(uid, branchId).doc(batchId);
-    final branchRef = _branchesRef(uid).doc(branchId);
     var imported = 0;
     var index = 0;
     while (index < drafts.length) {
@@ -246,17 +218,7 @@ class StudentRemoteDataSource {
         );
       }
     }
-    var feeTotal = 0;
-    for (final draft in drafts) {
-      feeTotal += draft.monthlyFee;
-    }
-    await batchRef.update(<String, Object?>{
-      FirestoreKeys.studentCount: FieldValue.increment(drafts.length),
-      FirestoreKeys.expectedMonthlyTotal: FieldValue.increment(feeTotal),
-    });
-    await branchRef.update(<String, Object?>{
-      FirestoreKeys.studentCount: FieldValue.increment(drafts.length),
-    });
+    await _syncBatchAndBranchCounters(uid, branchId, batchId);
     return ImportStudentsResult(
       imported: imported,
       skipped: 0,
@@ -296,5 +258,40 @@ class StudentRemoteDataSource {
 
   String _duplicateKey(String name, String whatsapp) {
     return '${name.trim().toLowerCase()}|$whatsapp';
+  }
+
+  Future<void> _syncBatchAndBranchCounters(
+    String uid,
+    String branchId,
+    String batchId,
+  ) async {
+    final studentsSnap = await _studentsRef(uid, branchId, batchId)
+        .where(FirestoreKeys.isActive, isEqualTo: true)
+        .get();
+    var feeTotal = 0;
+    for (final doc in studentsSnap.docs) {
+      feeTotal +=
+          (doc.data()[FirestoreKeys.monthlyFee] as num?)?.toInt() ?? 0;
+    }
+    await _batchesRef(uid, branchId).doc(batchId).update(<String, Object?>{
+      FirestoreKeys.studentCount: studentsSnap.size,
+      FirestoreKeys.expectedMonthlyTotal: feeTotal,
+    });
+    final batchesSnap = await _batchesRef(uid, branchId)
+        .where(FirestoreKeys.isActive, isEqualTo: true)
+        .get();
+    var branchStudentTotal = 0;
+    for (final batchDoc in batchesSnap.docs) {
+      if (batchDoc.id == batchId) {
+        branchStudentTotal += studentsSnap.size;
+      } else {
+        branchStudentTotal +=
+            (batchDoc.data()[FirestoreKeys.studentCount] as num?)?.toInt() ??
+            0;
+      }
+    }
+    await _branchesRef(uid).doc(branchId).update(<String, Object?>{
+      FirestoreKeys.studentCount: branchStudentTotal,
+    });
   }
 }

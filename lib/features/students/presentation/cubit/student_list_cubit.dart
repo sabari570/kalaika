@@ -34,6 +34,12 @@ class StudentListCubit extends Cubit<StudentListState> {
     );
   }
 
+  /// Cancels the student list listener.
+  void stopListening() {
+    unawaited(_subscription?.cancel());
+    _subscription = null;
+  }
+
   /// Toggles a student's active flag.
   Future<Result<void>> setActive({
     required String branchId,

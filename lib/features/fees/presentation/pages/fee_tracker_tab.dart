@@ -15,10 +15,10 @@ import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
 import 'package:feemanager/features/fees/domain/entities/record_payment_result.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_cubit.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_state.dart';
-import 'package:feemanager/features/fees/presentation/utils/receipt_share_utils.dart';
+import 'package:feemanager/features/fees/presentation/utils/receipt_delivery_utils.dart';
 import 'package:feemanager/features/fees/presentation/widgets/fee_row_widget.dart';
-import 'package:feemanager/features/fees/presentation/widgets/mark_receipt_sent_dialog.dart';
 import 'package:feemanager/features/fees/presentation/widgets/record_payment_confirm_dialog.dart';
+import 'package:feemanager/features/fees/presentation/widgets/sent_receipt_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -61,6 +61,8 @@ class FeeTrackerTab extends StatelessWidget {
             ),
           ),
           FeeTrackerLoaded() => _FeeTrackerBody(
+            branchId: branchId,
+            batchId: batchId,
             state: state,
             batchDefaultFee: batchDefaultFee,
           ),
@@ -72,10 +74,14 @@ class FeeTrackerTab extends StatelessWidget {
 
 class _FeeTrackerBody extends StatelessWidget {
   const _FeeTrackerBody({
+    required this.branchId,
+    required this.batchId,
     required this.state,
     required this.batchDefaultFee,
   });
 
+  final String branchId;
+  final String batchId;
   final FeeTrackerLoaded state;
   final int batchDefaultFee;
 
@@ -226,6 +232,15 @@ class _FeeTrackerBody extends StatelessWidget {
                       ),
                     ),
                     onSendTap: () => unawaited(_shareReceipt(context, row)),
+                    onSentTap: () => unawaited(
+                      SentReceiptBottomSheet.show(
+                        context,
+                        row: row,
+                        branchId: branchId,
+                        batchId: batchId,
+                        cubit: context.read<FeeTrackerCubit>(),
+                      ),
+                    ),
                     onLongPress: () => unawaited(_voidPayment(context, row)),
                   );
                 },
@@ -247,10 +262,11 @@ class _FeeTrackerBody extends StatelessWidget {
     FeeRow row,
     DateTime selectedMonth,
   ) async {
-    final form = await RecordPaymentConfirmDialog.show(
+    final form = await RecordPaymentConfirmSheet.show(
       context,
       studentName: row.student.fullName,
       amount: row.amount,
+      batchDefaultFee: batchDefaultFee,
       month: selectedMonth,
     );
     if (form == null || !context.mounted) {
@@ -282,8 +298,10 @@ class _FeeTrackerBody extends StatelessWidget {
     final cubit = context.read<FeeTrackerCubit>();
     final result = await cubit.recordPayment(
       row: row,
+      amount: form.amount,
       mode: form.mode,
       paidOn: form.paidOn,
+      note: form.note,
     );
     if (context.mounted) {
       Navigator.of(context, rootNavigator: true).pop();
@@ -293,27 +311,26 @@ class _FeeTrackerBody extends StatelessWidget {
     }
     switch (result) {
       case Success<RecordPaymentResult>(:final value):
-        await ReceiptShareUtils.sharePdf(
+        await ReceiptDeliveryUtils.sharePdfAndPromptMarkSent(
+          context: context,
+          row: row,
+          branchId: branchId,
+          batchId: batchId,
+          cubit: cubit,
           pdfBytes: value.pdfBytes,
           receiptNo: value.receiptNo,
+          promptMarkSent: true,
+          treatRowAsPending: true,
         );
-        if (!context.mounted) {
-          return;
-        }
-        final marked = await MarkReceiptSentDialog.show(context);
-        if (marked == true && context.mounted) {
-          final markResult = await cubit.markReceiptSentForRow(row);
-          if (context.mounted) {
-            switch (markResult) {
-              case Success<void>():
-                break;
-              case Err(:final failure):
-                AppSnackBar.showError(context, failure.message);
-            }
-          }
-        }
       case Err(:final failure):
-        AppSnackBar.showError(context, failure.message);
+        AppSnackBar.showErrorWithAction(
+          context,
+          message: failure.message,
+          actionLabel: AppStrings.retry,
+          onAction: () => unawaited(
+            _recordPayment(context, row, selectedMonth),
+          ),
+        );
     }
   }
 
@@ -326,27 +343,16 @@ class _FeeTrackerBody extends StatelessWidget {
     switch (pdfResult) {
       case Success(:final value):
         final receiptNo = row.payment?.receiptNo ?? 'receipt';
-        await ReceiptShareUtils.sharePdf(
+        await ReceiptDeliveryUtils.sharePdfAndPromptMarkSent(
+          context: context,
+          row: row,
+          branchId: branchId,
+          batchId: batchId,
+          cubit: cubit,
           pdfBytes: value,
           receiptNo: receiptNo,
+          promptMarkSent: true,
         );
-        if (!context.mounted) {
-          return;
-        }
-        if (row.displayStatus == FeeRowStatus.pendingSend) {
-          final marked = await MarkReceiptSentDialog.show(context);
-          if (marked == true && context.mounted) {
-            final markResult = await cubit.markReceiptSentForRow(row);
-            if (context.mounted) {
-              switch (markResult) {
-                case Success<void>():
-                  break;
-                case Err(:final failure):
-                  AppSnackBar.showError(context, failure.message);
-              }
-            }
-          }
-        }
       case Err(:final failure):
         AppSnackBar.showError(context, failure.message);
     }

@@ -123,6 +123,7 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
   /// Records payment, updates Firestore, and returns PDF bytes.
   Future<Result<RecordPaymentResult>> recordPayment({
     required FeeRow row,
+    required int amount,
     required String mode,
     required DateTime paidOn,
     String? note,
@@ -153,7 +154,7 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
           batchId: batchId,
           student: row.student,
           monthKey: monthKey,
-          amount: row.amount,
+          amount: amount,
           mode: mode,
           paidOn: paidOn,
           note: note,

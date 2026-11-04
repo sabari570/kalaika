@@ -33,6 +33,43 @@ abstract final class AppSnackBar {
     );
   }
 
+  /// Shows an error snack bar with a [actionLabel] that invokes [onAction].
+  static void showErrorWithAction(
+    BuildContext context, {
+    required String message,
+    required String actionLabel,
+    required VoidCallback onAction,
+  }) {
+    final messenger = _messenger(context);
+    if (messenger == null) {
+      return;
+    }
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          duration: _displayDuration,
+          dismissDirection: DismissDirection.down,
+          margin: const EdgeInsets.fromLTRB(
+            AppSpacing.screenHorizontal,
+            0,
+            AppSpacing.screenHorizontal,
+            AppSpacing.lg,
+          ),
+          content: _SnackBarContent(
+            message: message,
+            icon: Icons.error_outline,
+            accent: AppPalette.error,
+          ),
+          action: SnackBarAction(
+            label: actionLabel,
+            onPressed: onAction,
+          ),
+        ),
+      );
+  }
+
   /// Shows a generic failure snack bar.
   static void showUnknownError(BuildContext context) {
     showError(context, AppStrings.unknownError);

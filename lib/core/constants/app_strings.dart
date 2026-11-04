@@ -121,7 +121,14 @@ abstract final class AppStrings {
   static const String recordPaymentConfirmIntro =
       'You are about to mark the following class fee as paid.';
   static const String recordPaymentAmountLine = 'Amount: Rs. {amount}';
+  static const String recordPaymentAmountLabel = 'Amount';
   static const String recordPaymentMonthLine = 'Month: {month}';
+  static const String recordPaymentBatchFeeLine = 'Batch fee: Rs. {amount}';
+  static const String paymentNoteOptional = 'Note (optional)';
+  static const String paymentModeCash = 'Cash';
+  static const String paymentModeUpi = 'UPI';
+  static const String paymentModeBank = 'Bank transfer';
+  static const String paymentModeOther = 'Other';
   static const String recordPaymentIrreversible =
       'This action is irreversible. A payment record and PDF receipt '
       'will be created for this month.';
@@ -132,12 +139,16 @@ abstract final class AppStrings {
   static const String paidOnDate = 'Paid on';
   static const String markReceiptSentTitle = 'Receipt delivery';
   static const String markReceiptSentMessage =
-      'Was the receipt sent to the guardian?';
+      'Was the receipt sent to {name}?';
+  static const String validWhatsappRequired =
+      'A valid WhatsApp number is required.';
+  static const String receiptDetails = 'Receipt details';
+  static const String resendOnWhatsapp = 'Resend on WhatsApp';
   static const String markReceiptSentYes = 'Yes, mark as sent';
   static const String markReceiptSentNo = 'Not yet';
-  static const String voidPayment = 'Void payment';
+  static const String voidPayment = 'Mark as unpaid (void receipt)';
   static const String voidPaymentConfirm =
-      'Void this payment? The fee row will return to unpaid.';
+      'This payment will be voided and the fee row will return to unpaid.';
   static const String feeReceiptShareSubject = 'Fee receipt';
   static const String confirmPayment = 'Confirm payment';
   static const String statusSentOn = 'Sent on {date}';

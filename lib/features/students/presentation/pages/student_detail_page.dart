@@ -16,6 +16,7 @@ import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
 import 'package:feemanager/core/widgets/kalaika_screen_body.dart';
 import 'package:feemanager/core/widgets/status_chip.dart';
 import 'package:feemanager/features/fees/domain/usecases/payment_receipt_actions.dart';
+import 'package:feemanager/features/fees/presentation/utils/receipt_delivery_utils.dart';
 import 'package:feemanager/features/fees/presentation/utils/receipt_share_utils.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
 import 'package:feemanager/features/students/domain/entities/student_payment_summary.dart';
@@ -279,6 +280,15 @@ class _StudentDetailBody extends StatelessWidget {
     }
     switch (result) {
       case Success(:final value):
+        final canShare = await ReceiptDeliveryUtils.ensureWhatsappForShare(
+          context,
+          branchId: branchId,
+          batchId: batchId,
+          student: student,
+        );
+        if (!canShare || !context.mounted) {
+          return;
+        }
         await ReceiptShareUtils.sharePdf(
           pdfBytes: value,
           receiptNo: payment.receiptNo ?? payment.id,

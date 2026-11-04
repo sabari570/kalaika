@@ -4,13 +4,24 @@ import 'package:flutter/material.dart';
 /// Asks whether the user sent the receipt via the share sheet.
 class MarkReceiptSentDialog extends StatelessWidget {
   /// Creates the dialog.
-  const MarkReceiptSentDialog({super.key});
+  const MarkReceiptSentDialog({
+    required this.recipientName,
+    super.key,
+  });
+
+  /// Guardian or student name shown in the prompt.
+  final String recipientName;
 
   /// Shows the dialog; returns true when the user confirms send.
-  static Future<bool?> show(BuildContext context) {
+  static Future<bool?> show(
+    BuildContext context, {
+    required String recipientName,
+  }) {
     return showDialog<bool>(
       context: context,
-      builder: (context) => const MarkReceiptSentDialog(),
+      builder: (context) => MarkReceiptSentDialog(
+        recipientName: recipientName,
+      ),
     );
   }
 
@@ -18,7 +29,12 @@ class MarkReceiptSentDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text(AppStrings.markReceiptSentTitle),
-      content: const Text(AppStrings.markReceiptSentMessage),
+      content: Text(
+        AppStrings.markReceiptSentMessage.replaceFirst(
+          '{name}',
+          recipientName,
+        ),
+      ),
       actions: <Widget>[
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),

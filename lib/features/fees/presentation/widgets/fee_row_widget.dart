@@ -14,6 +14,7 @@ class FeeRowWidget extends StatelessWidget {
     required this.row,
     required this.onUnpaidTap,
     required this.onSendTap,
+    this.onSentTap,
     this.onLongPress,
     super.key,
   });
@@ -26,6 +27,9 @@ class FeeRowWidget extends StatelessWidget {
 
   /// Invoked when send is pressed on a pending row (M7).
   final VoidCallback onSendTap;
+
+  /// Invoked when a sent row is tapped.
+  final VoidCallback? onSentTap;
 
   /// Invoked on long-press to void a recorded payment.
   final VoidCallback? onLongPress;
@@ -40,6 +44,8 @@ class FeeRowWidget extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: GestureDetector(
         onLongPress: onLongPress,
+        onTap: row.displayStatus == FeeRowStatus.sent ? onSentTap : null,
+        behavior: HitTestBehavior.opaque,
         child: Row(
           children: <Widget>[
             _StatusControl(

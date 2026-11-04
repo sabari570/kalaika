@@ -10,6 +10,7 @@ import 'package:feemanager/core/widgets/confirm_dialog.dart';
 import 'package:feemanager/core/widgets/empty_state.dart';
 import 'package:feemanager/core/widgets/kalaika_card.dart';
 import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
+import 'package:feemanager/core/widgets/loading_overlay.dart';
 import 'package:feemanager/features/branches/domain/entities/branch.dart';
 import 'package:feemanager/features/branches/presentation/cubit/branch_list_cubit.dart';
 import 'package:feemanager/features/branches/presentation/cubit/branch_list_state.dart';
@@ -69,38 +70,42 @@ class BranchesPage extends StatelessWidget {
                 actionLabel: AppStrings.retry,
                 onAction: context.read<BranchListCubit>().started,
               ),
-              BranchListLoaded(:final branches) =>
-                branches.isEmpty
-                    ? EmptyState(
-                        message: AppStrings.noBranchesYet,
-                        actionLabel: AppStrings.createBranch,
-                        onAction: () => context.push(AppRoutes.branchNew),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(
-                          AppSpacing.screenHorizontal,
-                          AppSpacing.lg,
-                          AppSpacing.screenHorizontal,
-                          AppSpacing.xxl * 4,
+              BranchListLoaded(:final branches, :final deletingBranchId) =>
+                LoadingOverlay(
+                  isLoading: deletingBranchId != null,
+                  child: branches.isEmpty
+                      ? EmptyState(
+                          message: AppStrings.noBranchesYet,
+                          actionLabel: AppStrings.createBranch,
+                          onAction: () => context.push(AppRoutes.branchNew),
+                        )
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.screenHorizontal,
+                            AppSpacing.lg,
+                            AppSpacing.screenHorizontal,
+                            AppSpacing.xxl * 4,
+                          ),
+                          itemCount: branches.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: AppSpacing.md),
+                          itemBuilder: (context, index) {
+                            final branch = branches[index];
+                            return _BranchCard(
+                              branch: branch,
+                              onTap: () => context.push(
+                                AppRoutes.branchDetailPath(branch.id),
+                              ),
+                              onEdit: () => context.push(
+                                AppRoutes.branchEditPath(branch.id),
+                              ),
+                              onDelete: () => unawaited(
+                                _confirmDelete(context, branch),
+                              ),
+                            );
+                          },
                         ),
-                        itemCount: branches.length,
-                        separatorBuilder: (_, _) =>
-                            const SizedBox(height: AppSpacing.md),
-                        itemBuilder: (context, index) {
-                          final branch = branches[index];
-                          return _BranchCard(
-                            branch: branch,
-                            onTap: () => context.push(
-                              AppRoutes.branchDetailPath(branch.id),
-                            ),
-                            onEdit: () => context.push(
-                              AppRoutes.branchEditPath(branch.id),
-                            ),
-                            onDelete: () =>
-                                unawaited(_confirmDelete(context, branch)),
-                          );
-                        },
-                      ),
+                ),
             };
           },
         ),

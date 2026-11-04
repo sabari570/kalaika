@@ -1,13 +1,20 @@
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/error/failure.dart';
+import 'package:feemanager/core/utils/firestore_debug_log.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 /// Maps thrown exceptions to typed [Failure] instances at repository
 /// boundaries.
 abstract final class ExceptionMapper {
   /// Converts [error] and optional [stackTrace] into a [Failure].
   static Failure map(Object error, [StackTrace? stackTrace]) {
+    FirestoreDebugLog.failure(
+      'ExceptionMapper.map',
+      error: error,
+      stackTrace: stackTrace,
+    );
     if (error is FirebaseAuthException) {
       return AuthFailure(_authMessage(error));
     }
@@ -21,7 +28,15 @@ abstract final class ExceptionMapper {
       if (error.code == 'permission-denied') {
         return const PermissionFailure(AppStrings.firestorePermissionDenied);
       }
-      return const UnknownFailure(AppStrings.firebaseInitFailed);
+      if (error.code == 'failed-precondition' ||
+          error.code == 'aborted') {
+        return const ServerFailure(AppStrings.receiptGenerateFailed);
+      }
+      return UnknownFailure(
+        kDebugMode
+            ? 'Firestore (${error.code}): ${error.message ?? ''}'
+            : AppStrings.unknownError,
+      );
     }
     if (error is AuthFailure) {
       return error;

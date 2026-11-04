@@ -92,6 +92,26 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
+  Future<Result<String>> buildReceiptShareMessage({
+    required String branchId,
+    required String batchId,
+    required String paymentId,
+    required Student student,
+  }) async {
+    try {
+      final message = await writeDataSource.buildReceiptShareMessage(
+        branchId: branchId,
+        batchId: batchId,
+        paymentId: paymentId,
+        student: student,
+      );
+      return Success<String>(message);
+    } on Object catch (error, stackTrace) {
+      return Err<String>(ExceptionMapper.map(error, stackTrace));
+    }
+  }
+
+  @override
   Future<Result<void>> markReceiptSent({
     required String branchId,
     required String batchId,

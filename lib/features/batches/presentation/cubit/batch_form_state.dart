@@ -57,6 +57,16 @@ final class BatchFormSaving extends BatchFormState {
   List<Object?> get props => <Object?>[draft];
 }
 
+/// Delete or deactivate in progress.
+final class BatchFormDeleting extends BatchFormState {
+  const BatchFormDeleting(this.draft);
+
+  final BatchDraft draft;
+
+  @override
+  List<Object?> get props => <Object?>[draft];
+}
+
 /// Save failed.
 final class BatchFormFailure extends BatchFormState {
   const BatchFormFailure(this.message, this.draft);

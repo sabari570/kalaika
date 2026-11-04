@@ -40,6 +40,14 @@ abstract class PaymentRepository {
     required Student student,
   });
 
+  /// Builds the share message for an existing payment.
+  Future<Result<String>> buildReceiptShareMessage({
+    required String branchId,
+    required String batchId,
+    required String paymentId,
+    required Student student,
+  });
+
   /// Marks a paid payment as sent.
   Future<Result<void>> markReceiptSent({
     required String branchId,

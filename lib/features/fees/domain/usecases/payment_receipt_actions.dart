@@ -82,6 +82,48 @@ class BuildReceiptPdfParams {
   final Student student;
 }
 
+/// Builds the WhatsApp-style share message for an existing payment.
+class BuildReceiptShareMessage
+    implements UseCase<String, BuildReceiptShareMessageParams> {
+  /// Creates the use case.
+  BuildReceiptShareMessage(this._repository);
+
+  final PaymentRepository _repository;
+
+  @override
+  Future<Result<String>> call(BuildReceiptShareMessageParams params) {
+    return _repository.buildReceiptShareMessage(
+      branchId: params.branchId,
+      batchId: params.batchId,
+      paymentId: params.paymentId,
+      student: params.student,
+    );
+  }
+}
+
+/// Parameters for [BuildReceiptShareMessage].
+class BuildReceiptShareMessageParams {
+  /// Creates parameters.
+  const BuildReceiptShareMessageParams({
+    required this.branchId,
+    required this.batchId,
+    required this.paymentId,
+    required this.student,
+  });
+
+  /// Branch id.
+  final String branchId;
+
+  /// Batch id.
+  final String batchId;
+
+  /// Payment document id.
+  final String paymentId;
+
+  /// Student entity for message context.
+  final Student student;
+}
+
 /// Voids a recorded payment.
 class VoidPayment implements UseCase<void, VoidPaymentParams> {
   /// Creates the use case.

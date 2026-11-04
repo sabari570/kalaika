@@ -39,6 +39,12 @@ service cloud.firestore {
         && request.resource.data.status == 'voided';
     }
 
+    function paymentReplaceVoided(uid) {
+      return resource.data.voided == true
+        && resource.data.status == 'voided'
+        && paymentCreateValid(uid);
+    }
+
     function paymentCreateValid(uid) {
       let data = request.resource.data;
       return data.ownerId == uid
@@ -127,7 +133,9 @@ service cloud.firestore {
             allow create: if isOwner(uid) && paymentCreateValid(uid);
             allow delete: if isOwner(uid);
             allow update: if isOwner(uid)
-              && (paymentSentTransitionOnly() || paymentVoidTransitionOnly());
+              && (paymentSentTransitionOnly()
+                || paymentVoidTransitionOnly()
+                || paymentReplaceVoided(uid));
           }
         }
       }

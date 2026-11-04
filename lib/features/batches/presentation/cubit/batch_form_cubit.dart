@@ -227,6 +227,10 @@ class BatchFormCubit extends Cubit<BatchFormState> {
       return;
     }
     final current = state;
+    if (current is! BatchFormReady) {
+      return;
+    }
+    emit(BatchFormDeleting(current.draft));
     final result = await _deleteBatch(
       DeleteBatchParams(branchId: branchId, batchId: batchId),
     );
@@ -234,9 +238,7 @@ class BatchFormCubit extends Cubit<BatchFormState> {
       case Success():
         emit(const BatchFormRemoved());
       case Err(:final failure):
-        if (current is BatchFormReady) {
-          emit(BatchFormFailure(failure.message, current.draft));
-        }
+        emit(BatchFormFailure(failure.message, current.draft));
     }
   }
 
@@ -248,6 +250,10 @@ class BatchFormCubit extends Cubit<BatchFormState> {
       return;
     }
     final current = state;
+    if (current is! BatchFormReady) {
+      return;
+    }
+    emit(BatchFormDeleting(current.draft));
     final result = await _deactivateBatch(
       DeleteBatchParams(branchId: branchId, batchId: batchId),
     );
@@ -255,9 +261,7 @@ class BatchFormCubit extends Cubit<BatchFormState> {
       case Success():
         emit(const BatchFormRemoved());
       case Err(:final failure):
-        if (current is BatchFormReady) {
-          emit(BatchFormFailure(failure.message, current.draft));
-        }
+        emit(BatchFormFailure(failure.message, current.draft));
     }
   }
 

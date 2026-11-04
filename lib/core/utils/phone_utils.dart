@@ -103,14 +103,44 @@ abstract final class PhoneUtils {
     return const PhoneInvalid(AppStrings.phoneInvalid);
   }
 
-  /// Formats stored [digits] for display.
+  /// Formats stored [digits] for display (India uses +91 and a space).
+  ///
+  /// Storage remains digits only, for example `919074283081`, without `+`.
   static String formatForDisplay(String digits) {
-    if (digits.length == 12 && digits.startsWith('91')) {
-      final local = digits.substring(2);
+    final stripped = stripFormatting(digits);
+    if (stripped.length == 12 && stripped.startsWith('91')) {
+      final local = stripped.substring(2);
       if (local.length == 10) {
         return '+91 ${local.substring(0, 5)} ${local.substring(5)}';
       }
     }
-    return '+$digits';
+    if (stripped.length == 10) {
+      return '+91 ${stripped.substring(0, 5)} ${stripped.substring(5)}';
+    }
+    if (stripped.isEmpty) {
+      return '';
+    }
+    return '+$stripped';
+  }
+
+  /// Returns normalized Indian WhatsApp digits when [storedOrRaw] is valid.
+  ///
+  /// Used to open WhatsApp directly; ambiguous numbers return null so the
+  /// system share sheet is shown instead.
+  static String? whatsappDigitsForDirectShare(String storedOrRaw) {
+    if (storedOrRaw.trim().isEmpty) {
+      return null;
+    }
+    final result = normalize(storedOrRaw, bulkImport: false);
+    if (result is! PhoneNormalized) {
+      return null;
+    }
+    final digits = result.digits;
+    if (digits.length == 12 &&
+        digits.startsWith('91') &&
+        digits.substring(2).length == 10) {
+      return digits;
+    }
+    return null;
   }
 }

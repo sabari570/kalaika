@@ -16,12 +16,18 @@ final class BranchListLoading extends BranchListState {
 
 /// Branch list loaded.
 final class BranchListLoaded extends BranchListState {
-  const BranchListLoaded(this.branches);
+  const BranchListLoaded(
+    this.branches, {
+    this.deletingBranchId,
+  });
 
   final List<Branch> branches;
 
+  /// When set, a branch delete request is in progress.
+  final String? deletingBranchId;
+
   @override
-  List<Object?> get props => <Object?>[branches];
+  List<Object?> get props => <Object?>[branches, deletingBranchId];
 }
 
 /// Load failure.

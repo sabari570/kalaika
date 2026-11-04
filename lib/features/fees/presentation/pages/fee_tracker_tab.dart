@@ -6,6 +6,7 @@ import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/app_text_field.dart';
+import 'package:feemanager/core/widgets/blocking_progress_dialog.dart';
 import 'package:feemanager/core/widgets/empty_state.dart';
 import 'package:feemanager/core/widgets/kalaika_animated_metric.dart';
 import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
@@ -272,28 +273,9 @@ class _FeeTrackerBody extends StatelessWidget {
     if (form == null || !context.mounted) {
       return;
     }
-    unawaited(
-      showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => PopScope(
-          canPop: false,
-          child: AlertDialog(
-            content: Row(
-              children: <Widget>[
-                const KalaikaProgressIndicator(),
-                const SizedBox(width: AppSpacing.lg),
-                Expanded(
-                  child: Text(
-                    AppStrings.generatingReceipt,
-                    style: Theme.of(dialogContext).textTheme.bodyLarge,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    BlockingProgressDialog.show(
+      context,
+      message: AppStrings.generatingReceipt,
     );
     final cubit = context.read<FeeTrackerCubit>();
     final result = await cubit.recordPayment(
@@ -304,23 +286,23 @@ class _FeeTrackerBody extends StatelessWidget {
       note: form.note,
     );
     if (context.mounted) {
-      Navigator.of(context, rootNavigator: true).pop();
+      BlockingProgressDialog.hide(context);
     }
     if (!context.mounted) {
       return;
     }
     switch (result) {
       case Success<RecordPaymentResult>(:final value):
-        await ReceiptDeliveryUtils.sharePdfAndPromptMarkSent(
+        await ReceiptDeliveryUtils.sharePreparedAndPromptMarkSent(
           context: context,
           row: row,
-          branchId: branchId,
-          batchId: batchId,
           cubit: cubit,
           pdfBytes: value.pdfBytes,
           receiptNo: value.receiptNo,
+          shareMessage: value.shareMessage,
           promptMarkSent: true,
           treatRowAsPending: true,
+          showPreparingDialog: true,
         );
       case Err(:final failure):
         AppSnackBar.showErrorWithAction(
@@ -336,25 +318,38 @@ class _FeeTrackerBody extends StatelessWidget {
 
   Future<void> _shareReceipt(BuildContext context, FeeRow row) async {
     final cubit = context.read<FeeTrackerCubit>();
+    await ReceiptDeliveryUtils.loadShareAndPromptMarkSent(
+      context: context,
+      row: row,
+      cubit: cubit,
+      promptMarkSent: true,
+      loadPayload: () => _loadSharePayload(cubit, row),
+    );
+  }
+
+  Future<Result<ReceiptSharePayload>> _loadSharePayload(
+    FeeTrackerCubit cubit,
+    FeeRow row,
+  ) async {
     final pdfResult = await cubit.buildReceiptPdfForRow(row);
-    if (!context.mounted) {
-      return;
-    }
+    final messageResult = await cubit.buildShareMessageForRow(row);
     switch (pdfResult) {
       case Success(:final value):
-        final receiptNo = row.payment?.receiptNo ?? 'receipt';
-        await ReceiptDeliveryUtils.sharePdfAndPromptMarkSent(
-          context: context,
-          row: row,
-          branchId: branchId,
-          batchId: batchId,
-          cubit: cubit,
-          pdfBytes: value,
-          receiptNo: receiptNo,
-          promptMarkSent: true,
-        );
+        final pdfBytes = value;
+        switch (messageResult) {
+          case Success(:final value):
+            return Success(
+              (
+                pdfBytes: pdfBytes,
+                receiptNo: row.payment?.receiptNo ?? 'receipt',
+                shareMessage: value,
+              ),
+            );
+          case Err(:final failure):
+            return Err(failure);
+        }
       case Err(:final failure):
-        AppSnackBar.showError(context, failure.message);
+        return Err(failure);
     }
   }
 
@@ -382,7 +377,12 @@ class _FeeTrackerBody extends StatelessWidget {
     if (confirmed != true || !context.mounted) {
       return;
     }
-    final result = await context.read<FeeTrackerCubit>().voidPaymentForRow(row);
+    BlockingProgressDialog.show(context, message: AppStrings.deleting);
+    final result =
+        await context.read<FeeTrackerCubit>().voidPaymentForRow(row);
+    if (context.mounted) {
+      BlockingProgressDialog.hide(context);
+    }
     if (!context.mounted) {
       return;
     }

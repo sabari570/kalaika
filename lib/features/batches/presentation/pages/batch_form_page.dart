@@ -185,11 +185,17 @@ class _BatchFormPageState extends State<BatchFormPage> {
       },
       builder: (context, state) {
         final isSaving = state is BatchFormSaving;
+        final isDeleting = state is BatchFormDeleting;
         BatchFormReady? ready;
         if (state is BatchFormReady) {
           ready = state;
           _syncControllers(state);
         } else if (state is BatchFormSaving) {
+          ready = BatchFormReady(
+            draft: state.draft,
+            isEditing: widget.isEditing,
+          );
+        } else if (state is BatchFormDeleting) {
           ready = BatchFormReady(
             draft: state.draft,
             isEditing: widget.isEditing,
@@ -209,7 +215,7 @@ class _BatchFormPageState extends State<BatchFormPage> {
         }
 
         return LoadingOverlay(
-          isLoading: isSaving,
+          isLoading: isSaving || isDeleting,
           child: Scaffold(
             appBar: AppBar(
               title: Text(title),
@@ -218,7 +224,7 @@ class _BatchFormPageState extends State<BatchFormPage> {
                   IconButton(
                     tooltip: AppStrings.delete,
                     icon: const Icon(Icons.delete_outline),
-                    onPressed: isSaving
+                    onPressed: isSaving || isDeleting
                         ? null
                         : () => unawaited(_onDeleteBatch(context)),
                   ),

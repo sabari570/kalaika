@@ -35,6 +35,9 @@ void configureFeesDependencies() {
       () => BuildReceiptPdf(sl<PaymentRepository>()),
     )
     ..registerLazySingleton(
+      () => BuildReceiptShareMessage(sl<PaymentRepository>()),
+    )
+    ..registerLazySingleton(
       () => VoidPayment(sl<PaymentRepository>()),
     )
     ..registerFactory(
@@ -44,6 +47,7 @@ void configureFeesDependencies() {
         recordPaymentAndReceipt: sl<RecordPaymentAndReceipt>(),
         markReceiptSent: sl<MarkReceiptSent>(),
         buildReceiptPdf: sl<BuildReceiptPdf>(),
+        buildReceiptShareMessage: sl<BuildReceiptShareMessage>(),
         voidPayment: sl<VoidPayment>(),
       ),
     );

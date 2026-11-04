@@ -153,7 +153,7 @@ class StudentFormCubit extends Cubit<StudentFormState> {
       return;
     }
     if (current.sameAsPhone) {
-      whatsappChanged(value);
+      _syncWhatsappFromPhoneInput();
     }
   }
 
@@ -180,9 +180,27 @@ class StudentFormCubit extends Cubit<StudentFormState> {
     if (current is StudentFormReady) {
       emit(current.copyWith(sameAsPhone: enabled));
       if (enabled) {
-        whatsappChanged(_phoneInput);
+        _syncWhatsappFromPhoneInput();
       }
     }
+  }
+
+  void _syncWhatsappFromPhoneInput() {
+    final digits = _phoneDigitsForStorage(_phoneInput);
+    if (digits != null) {
+      whatsappChanged(digits);
+      return;
+    }
+    whatsappChanged(_phoneInput);
+  }
+
+  String? _phoneDigitsForStorage(String raw) {
+    final result = PhoneUtils.normalize(raw, bulkImport: false);
+    return switch (result) {
+      PhoneNormalized(:final digits) => digits,
+      PhoneNeedsConfirmation(:final digits) => digits,
+      _ => null,
+    };
   }
 
   void dateOfBirthChanged(DateTime? value) {

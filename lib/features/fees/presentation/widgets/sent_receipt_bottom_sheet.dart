@@ -1,7 +1,6 @@
 import 'package:feemanager/core/constants/app_spacing.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/error/result.dart';
-import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/gradient_button.dart';
 import 'package:feemanager/core/widgets/outlined_copper_button.dart';
 import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
@@ -105,24 +104,31 @@ class SentReceiptBottomSheet extends StatelessWidget {
 
   Future<void> _shareReceipt(BuildContext context) async {
     Navigator.of(context).pop();
-    final pdfResult = await cubit.buildReceiptPdfForRow(row);
-    if (!context.mounted) {
-      return;
-    }
-    switch (pdfResult) {
-      case Success(:final value):
-        await ReceiptDeliveryUtils.sharePdfAndPromptMarkSent(
-          context: context,
-          row: row,
-          branchId: branchId,
-          batchId: batchId,
-          cubit: cubit,
-          pdfBytes: value,
-          receiptNo: row.payment?.receiptNo ?? 'receipt',
-          promptMarkSent: false,
-        );
-      case Err(:final failure):
-        AppSnackBar.showError(context, failure.message);
-    }
+    await ReceiptDeliveryUtils.loadAndOpenShareSheet(
+      context: context,
+      student: row.student,
+      loadPayload: () async {
+        final pdfResult = await cubit.buildReceiptPdfForRow(row);
+        final messageResult = await cubit.buildShareMessageForRow(row);
+        switch (pdfResult) {
+          case Success(:final value):
+            final pdfBytes = value;
+            switch (messageResult) {
+              case Success(:final value):
+                return Success(
+                  (
+                    pdfBytes: pdfBytes,
+                    receiptNo: row.payment?.receiptNo ?? 'receipt',
+                    shareMessage: value,
+                  ),
+                );
+              case Err(:final failure):
+                return Err(failure);
+            }
+          case Err(:final failure):
+            return Err(failure);
+        }
+      },
+    );
   }
 }

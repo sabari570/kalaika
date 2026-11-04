@@ -6,6 +6,7 @@ import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/utils/phone_utils.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
+import 'package:feemanager/core/widgets/blocking_progress_dialog.dart';
 import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_cubit.dart';
 import 'package:feemanager/features/fees/presentation/utils/receipt_share_utils.dart';
@@ -14,7 +15,14 @@ import 'package:feemanager/features/students/domain/entities/student.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-/// Share flow, WhatsApp checks, and mark-sent prompt after delivery.
+/// PDF bytes, receipt number, and share message for delivery.
+typedef ReceiptSharePayload = ({
+  Uint8List pdfBytes,
+  String receiptNo,
+  String shareMessage,
+});
+
+/// Share flow and mark-sent prompt after delivery.
 abstract final class ReceiptDeliveryUtils {
   /// Guardian name for receipts, or the student name when absent.
   static String recipientName(Student student) {
@@ -66,43 +74,81 @@ abstract final class ReceiptDeliveryUtils {
     return false;
   }
 
-  /// Shares [pdfBytes] and prompts to mark sent when appropriate.
-  static Future<void> sharePdfAndPromptMarkSent({
+  /// Loads share content with a blocking dialog, opens the share sheet, then
+  /// optionally prompts to mark sent.
+  static Future<void> loadShareAndPromptMarkSent({
     required BuildContext context,
     required FeeRow row,
-    required String branchId,
-    required String batchId,
     required FeeTrackerCubit cubit,
-    required Uint8List pdfBytes,
-    required String receiptNo,
+    required Future<Result<ReceiptSharePayload>> Function() loadPayload,
     required bool promptMarkSent,
     bool treatRowAsPending = false,
   }) async {
-    final canShare = await ensureWhatsappForShare(
+    BlockingProgressDialog.show(
       context,
-      branchId: branchId,
-      batchId: batchId,
-      student: row.student,
+      message: AppStrings.preparingReceiptShare,
     );
-    if (!canShare || !context.mounted) {
+    final payloadResult = await loadPayload();
+    if (!context.mounted) {
       return;
     }
-    var leftApp = false;
-    final shareObserver = _LifecycleObserver((state) {
-      if (state == AppLifecycleState.inactive ||
-          state == AppLifecycleState.paused) {
-        leftApp = true;
-      }
-    });
-    final binding = WidgetsBinding.instance..addObserver(shareObserver);
-    try {
-      await ReceiptShareUtils.sharePdf(
-        pdfBytes: pdfBytes,
-        receiptNo: receiptNo,
-      );
-    } finally {
-      binding.removeObserver(shareObserver);
+    switch (payloadResult) {
+      case Err(:final failure):
+        BlockingProgressDialog.hide(context);
+        AppSnackBar.showError(context, failure.message);
+      case Success(:final value):
+        final leftApp = await _deliverShare(
+          context: context,
+          student: row.student,
+          pdfBytes: value.pdfBytes,
+          receiptNo: value.receiptNo,
+          shareMessage: value.shareMessage,
+          dismissPreparingOverlay: true,
+        );
+        if (!context.mounted || !promptMarkSent) {
+          return;
+        }
+        if (!treatRowAsPending &&
+            row.displayStatus != FeeRowStatus.pendingSend) {
+          return;
+        }
+        if (leftApp) {
+          await _waitForResume();
+        }
+        if (!context.mounted) {
+          return;
+        }
+        await _promptMarkSent(context, row: row, cubit: cubit);
     }
+  }
+
+  /// Opens the share sheet for known content; dismisses preparing dialog when
+  /// the system sheet appears.
+  static Future<void> sharePreparedAndPromptMarkSent({
+    required BuildContext context,
+    required FeeRow row,
+    required FeeTrackerCubit cubit,
+    required Uint8List pdfBytes,
+    required String receiptNo,
+    required String shareMessage,
+    required bool promptMarkSent,
+    bool treatRowAsPending = false,
+    bool showPreparingDialog = false,
+  }) async {
+    if (showPreparingDialog) {
+      BlockingProgressDialog.show(
+        context,
+        message: AppStrings.preparingReceiptShare,
+      );
+    }
+    final leftApp = await _deliverShare(
+      context: context,
+      student: row.student,
+      pdfBytes: pdfBytes,
+      receiptNo: receiptNo,
+      shareMessage: shareMessage,
+      dismissPreparingOverlay: showPreparingDialog,
+    );
     if (!context.mounted || !promptMarkSent) {
       return;
     }
@@ -117,6 +163,164 @@ abstract final class ReceiptDeliveryUtils {
       return;
     }
     await _promptMarkSent(context, row: row, cubit: cubit);
+  }
+
+  /// Loads share content with a blocking dialog, then opens the share sheet.
+  static Future<void> loadAndOpenShareSheet({
+    required BuildContext context,
+    required Student student,
+    required Future<Result<ReceiptSharePayload>> Function() loadPayload,
+  }) async {
+    BlockingProgressDialog.show(
+      context,
+      message: AppStrings.preparingReceiptShare,
+    );
+    final payloadResult = await loadPayload();
+    if (!context.mounted) {
+      return;
+    }
+    switch (payloadResult) {
+      case Err(:final failure):
+        BlockingProgressDialog.hide(context);
+        AppSnackBar.showError(context, failure.message);
+      case Success(:final value):
+        await _deliverShare(
+          context: context,
+          student: student,
+          pdfBytes: value.pdfBytes,
+          receiptNo: value.receiptNo,
+          shareMessage: value.shareMessage,
+          dismissPreparingOverlay: true,
+        );
+    }
+  }
+
+  static Future<bool> _deliverShare({
+    required BuildContext context,
+    required Student student,
+    required Uint8List pdfBytes,
+    required String receiptNo,
+    required String shareMessage,
+    required bool dismissPreparingOverlay,
+  }) async {
+    final whatsappDigits = PhoneUtils.whatsappDigitsForDirectShare(
+      student.whatsappNumber,
+    );
+    if (whatsappDigits != null) {
+      final opened = await _openWhatsAppShare(
+        context: context,
+        pdfBytes: pdfBytes,
+        receiptNo: receiptNo,
+        shareMessage: shareMessage,
+        phoneDigits: whatsappDigits,
+        dismissPreparingOverlay: dismissPreparingOverlay,
+      );
+      if (opened) {
+        return true;
+      }
+    }
+    if (!context.mounted) {
+      return false;
+    }
+    return _openSystemShareSheet(
+      context: context,
+      pdfBytes: pdfBytes,
+      receiptNo: receiptNo,
+      shareMessage: shareMessage,
+      dismissPreparingOverlay: BlockingProgressDialog.isVisible,
+    );
+  }
+
+  static Future<bool> _openWhatsAppShare({
+    required BuildContext context,
+    required Uint8List pdfBytes,
+    required String receiptNo,
+    required String shareMessage,
+    required String phoneDigits,
+    required bool dismissPreparingOverlay,
+  }) async {
+    var leftApp = false;
+    var overlayDismissed = !dismissPreparingOverlay;
+
+    void dismissOverlay() {
+      if (overlayDismissed || !context.mounted) {
+        return;
+      }
+      if (!BlockingProgressDialog.isVisible) {
+        overlayDismissed = true;
+        return;
+      }
+      overlayDismissed = true;
+      BlockingProgressDialog.hide(context);
+    }
+
+    final shareObserver = _LifecycleObserver((state) {
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.paused) {
+        leftApp = true;
+        dismissOverlay();
+      }
+    });
+    final binding = WidgetsBinding.instance..addObserver(shareObserver);
+    try {
+      final opened = await ReceiptShareUtils.sharePdfToWhatsApp(
+        pdfBytes: pdfBytes,
+        receiptNo: receiptNo,
+        phoneDigits: phoneDigits,
+        text: shareMessage,
+      );
+      if (!opened) {
+        dismissOverlay();
+        return false;
+      }
+    } finally {
+      binding.removeObserver(shareObserver);
+      dismissOverlay();
+    }
+    return leftApp;
+  }
+
+  static Future<bool> _openSystemShareSheet({
+    required BuildContext context,
+    required Uint8List pdfBytes,
+    required String receiptNo,
+    required String shareMessage,
+    required bool dismissPreparingOverlay,
+  }) async {
+    var leftApp = false;
+    var overlayDismissed = !dismissPreparingOverlay;
+
+    void dismissOverlay() {
+      if (overlayDismissed || !context.mounted) {
+        return;
+      }
+      if (!BlockingProgressDialog.isVisible) {
+        overlayDismissed = true;
+        return;
+      }
+      overlayDismissed = true;
+      BlockingProgressDialog.hide(context);
+    }
+
+    final shareObserver = _LifecycleObserver((state) {
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.paused) {
+        leftApp = true;
+        dismissOverlay();
+      }
+    });
+    final binding = WidgetsBinding.instance..addObserver(shareObserver);
+    try {
+      await ReceiptShareUtils.sharePdf(
+        pdfBytes: pdfBytes,
+        receiptNo: receiptNo,
+        text: shareMessage,
+      );
+    } finally {
+      binding.removeObserver(shareObserver);
+      dismissOverlay();
+    }
+    return leftApp;
   }
 
   static Future<void> _waitForResume() async {

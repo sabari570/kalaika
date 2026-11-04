@@ -32,8 +32,21 @@ class BranchListCubit extends Cubit<BranchListState> {
   }
 
   /// Deletes a branch when allowed.
-  Future<Result<void>> deleteBranch(String branchId) {
-    return _deleteBranch(branchId);
+  Future<Result<void>> deleteBranch(String branchId) async {
+    final current = state;
+    if (current is BranchListLoaded) {
+      emit(
+        BranchListLoaded(
+          current.branches,
+          deletingBranchId: branchId,
+        ),
+      );
+    }
+    final result = await _deleteBranch(branchId);
+    if (current is BranchListLoaded && result is Err<void>) {
+      emit(BranchListLoaded(current.branches));
+    }
+    return result;
   }
 
   @override

@@ -5,9 +5,11 @@ import 'package:feemanager/core/constants/app_defaults.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/constants/firestore_keys.dart';
 import 'package:feemanager/core/utils/firebase_user_scope.dart';
+import 'package:feemanager/core/utils/firestore_debug_log.dart';
 import 'package:feemanager/core/utils/payment_document_id.dart';
 import 'package:feemanager/core/utils/receipt_number_utils.dart';
 import 'package:feemanager/core/utils/summary_delta_utils.dart';
+import 'package:feemanager/core/utils/template_utils.dart';
 import 'package:feemanager/features/fees/data/services/receipt_pdf_builder.dart';
 import 'package:feemanager/features/fees/domain/entities/institute_settings.dart';
 import 'package:feemanager/features/fees/domain/entities/record_payment_result.dart';
@@ -63,11 +65,17 @@ class PaymentWriteDataSource {
           monthKey: monthKey,
           note: note,
         );
+        final shareMessage = _buildShareMessageFromPaymentMap(
+          data: data,
+          context: context,
+          monthKey: monthKey,
+        );
         return RecordPaymentResult(
           receiptNo: data[FirestoreKeys.receiptNo] as String? ?? '',
           status: data[FirestoreKeys.status] as String? ??
               FirestoreKeys.statusPaid,
           pdfBytes: pdf,
+          shareMessage: shareMessage,
         );
       }
     }
@@ -85,54 +93,88 @@ class PaymentWriteDataSource {
     final year = int.parse(monthKey.substring(0, 4));
     final counterRef = _countersRef(uid);
     var receiptNo = '';
+    final paymentPath = payRef.path;
 
-    await _firestore.runTransaction((transaction) async {
-      final counterSnap = await transaction.get(counterRef);
-      final currentSeq =
-          (counterSnap.data()?[FirestoreKeys.receiptSeq] as num?)?.toInt() ??
-          0;
-      final nextSeq = currentSeq + 1;
-      receiptNo = ReceiptNumberUtils.format(year, nextSeq);
+    FirestoreDebugLog.operation(
+      'recordPaymentAndReceipt',
+      path: paymentPath,
+      details: <String, Object?>{
+        'studentId': student.id,
+        'monthKey': monthKey,
+        'replaceVoided': existing.exists &&
+            (existing.data()?[FirestoreKeys.voided] as bool? ?? false),
+      },
+    );
 
-      if (counterSnap.exists) {
-        transaction.update(counterRef, {
-          FirestoreKeys.receiptSeq: nextSeq,
-        });
-      } else {
-        transaction.set(counterRef, {
-          FirestoreKeys.receiptSeq: nextSeq,
-        });
-      }
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final existingPay = await transaction.get(payRef);
+        final counterSnap = await transaction.get(counterRef);
 
-      final paymentData = _paymentPayload(
-        uid: uid,
-        branchId: branchId,
-        batchId: batchId,
-        student: student,
-        batchFee: context.batchDefaultFee,
-        monthKey: monthKey,
-        amount: amount,
-        mode: mode,
-        paidOn: paidOn,
-        note: note,
-        receiptNo: receiptNo,
+        final shouldReplaceVoided = existingPay.exists &&
+            (existingPay.data()?[FirestoreKeys.voided] as bool? ?? false);
+        if (existingPay.exists && !shouldReplaceVoided) {
+          throw StateError(AppStrings.receiptGenerateFailed);
+        }
+
+        final currentSeq =
+            (counterSnap.data()?[FirestoreKeys.receiptSeq] as num?)?.toInt() ??
+            0;
+        final nextSeq = currentSeq + 1;
+        receiptNo = ReceiptNumberUtils.format(year, nextSeq);
+
+        if (counterSnap.exists) {
+          transaction.update(counterRef, {
+            FirestoreKeys.receiptSeq: nextSeq,
+          });
+        } else {
+          transaction.set(counterRef, {
+            FirestoreKeys.receiptSeq: nextSeq,
+          });
+        }
+
+        final paymentData = _paymentPayload(
+          uid: uid,
+          branchId: branchId,
+          batchId: batchId,
+          student: student,
+          batchFee: context.batchDefaultFee,
+          monthKey: monthKey,
+          amount: amount,
+          mode: mode,
+          paidOn: paidOn,
+          note: note,
+          receiptNo: receiptNo,
+        );
+
+        transaction.set(payRef, paymentData);
+
+        final afterSnapshot = PaymentSummarySnapshot.fromMap(paymentData);
+        final delta = SummaryDeltaUtils.deltaSummary(null, afterSnapshot);
+        final summaryUpdate = SummaryDeltaUtils.buildSummaryUpdate(
+          monthKey: monthKey,
+          batchId: batchId,
+          branchId: branchId,
+          delta: delta,
+        );
+        if (summaryUpdate.isNotEmpty) {
+          final summaryRef = _summaryRef(uid, monthKey);
+          transaction.set(summaryRef, summaryUpdate, SetOptions(merge: true));
+        }
+      });
+      FirestoreDebugLog.success(
+        'recordPaymentAndReceipt',
+        path: paymentPath,
       );
-
-      transaction.set(payRef, paymentData);
-
-      final afterSnapshot = PaymentSummarySnapshot.fromMap(paymentData);
-      final delta = SummaryDeltaUtils.deltaSummary(null, afterSnapshot);
-      final summaryUpdate = SummaryDeltaUtils.buildSummaryUpdate(
-        monthKey: monthKey,
-        batchId: batchId,
-        branchId: branchId,
-        delta: delta,
+    } on Object catch (error, stackTrace) {
+      FirestoreDebugLog.failure(
+        'recordPaymentAndReceipt',
+        error: error,
+        stackTrace: stackTrace,
+        path: paymentPath,
       );
-      if (summaryUpdate.isNotEmpty) {
-        final summaryRef = _summaryRef(uid, monthKey);
-        transaction.set(summaryRef, summaryUpdate, SetOptions(merge: true));
-      }
-    });
+      rethrow;
+    }
 
     final pdfInput = _pdfInput(
       context: context,
@@ -146,11 +188,19 @@ class PaymentWriteDataSource {
     );
     final builder = await _pdfBuilderLoader();
     final pdfBytes = await builder.build(pdfInput);
+    final shareMessage = _buildShareMessage(
+      context: context,
+      monthKey: monthKey,
+      amount: amount,
+      batchFee: context.batchDefaultFee,
+      receiptNo: receiptNo,
+    );
 
     return RecordPaymentResult(
       receiptNo: receiptNo,
       status: FirestoreKeys.statusPaid,
       pdfBytes: pdfBytes,
+      shareMessage: shareMessage,
     );
   }
 
@@ -185,6 +235,36 @@ class PaymentWriteDataSource {
     );
   }
 
+  /// Builds the share message for an existing payment document.
+  Future<String> buildReceiptShareMessage({
+    required String branchId,
+    required String batchId,
+    required String paymentId,
+    required Student student,
+  }) async {
+    final uid = FirebaseUserScope.requireUid();
+    final snap = await _paymentRef(uid, branchId, batchId, paymentId).get();
+    if (!snap.exists) {
+      throw StateError(AppStrings.receiptOpenFailed);
+    }
+    final data = snap.data() ?? <String, dynamic>{};
+    final context = await _loadReceiptContext(
+      uid: uid,
+      branchId: branchId,
+      batchId: batchId,
+      student: student,
+    );
+    if (context == null) {
+      throw StateError(AppStrings.receiptOpenFailed);
+    }
+    final monthKey = data[FirestoreKeys.month] as String? ?? '';
+    return _buildShareMessageFromPaymentMap(
+      data: data,
+      context: context,
+      monthKey: monthKey,
+    );
+  }
+
   /// Marks a paid payment as sent and updates summaries.
   Future<void> markReceiptSent({
     required String branchId,
@@ -193,42 +273,54 @@ class PaymentWriteDataSource {
   }) async {
     final uid = FirebaseUserScope.requireUid();
     final payRef = _paymentRef(uid, branchId, batchId, paymentId);
-    await _firestore.runTransaction((transaction) async {
-      final snap = await transaction.get(payRef);
-      if (!snap.exists) {
-        throw StateError(AppStrings.unknownError);
-      }
-      final beforeData = snap.data() ?? <String, dynamic>{};
-      if (beforeData[FirestoreKeys.status] != FirestoreKeys.statusPaid) {
-        return;
-      }
-      final before = PaymentSummarySnapshot.fromMap(beforeData);
-      final afterData = Map<String, dynamic>.from(beforeData)
-        ..[FirestoreKeys.status] = FirestoreKeys.statusSent
-        ..[FirestoreKeys.sentVia] = 'share'
-        ..[FirestoreKeys.sentAt] = FieldValue.serverTimestamp();
-      transaction.update(payRef, {
-        FirestoreKeys.status: FirestoreKeys.statusSent,
-        FirestoreKeys.sentVia: 'share',
-        FirestoreKeys.sentAt: FieldValue.serverTimestamp(),
-      });
-      final after = PaymentSummarySnapshot.fromMap(afterData);
-      final delta = SummaryDeltaUtils.deltaSummary(before, after);
-      final monthKey = before.month;
-      final summaryUpdate = SummaryDeltaUtils.buildSummaryUpdate(
-        monthKey: monthKey,
-        batchId: batchId,
-        branchId: branchId,
-        delta: delta,
-      );
-      if (summaryUpdate.isNotEmpty) {
-        transaction.set(
-          _summaryRef(uid, monthKey),
-          summaryUpdate,
-          SetOptions(merge: true),
+    FirestoreDebugLog.operation('markReceiptSent', path: payRef.path);
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final snap = await transaction.get(payRef);
+        if (!snap.exists) {
+          throw StateError(AppStrings.unknownError);
+        }
+        final beforeData = snap.data() ?? <String, dynamic>{};
+        if (beforeData[FirestoreKeys.status] != FirestoreKeys.statusPaid) {
+          return;
+        }
+        final before = PaymentSummarySnapshot.fromMap(beforeData);
+        final afterData = Map<String, dynamic>.from(beforeData)
+          ..[FirestoreKeys.status] = FirestoreKeys.statusSent
+          ..[FirestoreKeys.sentVia] = 'share'
+          ..[FirestoreKeys.sentAt] = FieldValue.serverTimestamp();
+        transaction.update(payRef, {
+          FirestoreKeys.status: FirestoreKeys.statusSent,
+          FirestoreKeys.sentVia: 'share',
+          FirestoreKeys.sentAt: FieldValue.serverTimestamp(),
+        });
+        final after = PaymentSummarySnapshot.fromMap(afterData);
+        final delta = SummaryDeltaUtils.deltaSummary(before, after);
+        final monthKey = before.month;
+        final summaryUpdate = SummaryDeltaUtils.buildSummaryUpdate(
+          monthKey: monthKey,
+          batchId: batchId,
+          branchId: branchId,
+          delta: delta,
         );
-      }
-    });
+        if (summaryUpdate.isNotEmpty) {
+          transaction.set(
+            _summaryRef(uid, monthKey),
+            summaryUpdate,
+            SetOptions(merge: true),
+          );
+        }
+      });
+      FirestoreDebugLog.success('markReceiptSent', path: payRef.path);
+    } on Object catch (error, stackTrace) {
+      FirestoreDebugLog.failure(
+        'markReceiptSent',
+        error: error,
+        stackTrace: stackTrace,
+        path: payRef.path,
+      );
+      rethrow;
+    }
   }
 
   /// Voids a payment and reverses summary rollups.
@@ -239,40 +331,52 @@ class PaymentWriteDataSource {
   }) async {
     final uid = FirebaseUserScope.requireUid();
     final payRef = _paymentRef(uid, branchId, batchId, paymentId);
-    await _firestore.runTransaction((transaction) async {
-      final snap = await transaction.get(payRef);
-      if (!snap.exists) {
-        throw StateError(AppStrings.unknownError);
-      }
-      final beforeData = snap.data() ?? <String, dynamic>{};
-      if (beforeData[FirestoreKeys.voided] == true) {
-        return;
-      }
-      final before = PaymentSummarySnapshot.fromMap(beforeData);
-      final afterData = Map<String, dynamic>.from(beforeData)
-        ..[FirestoreKeys.voided] = true
-        ..[FirestoreKeys.status] = FirestoreKeys.statusVoided;
-      transaction.update(payRef, {
-        FirestoreKeys.voided: true,
-        FirestoreKeys.status: FirestoreKeys.statusVoided,
-      });
-      final after = PaymentSummarySnapshot.fromMap(afterData);
-      final delta = SummaryDeltaUtils.deltaSummary(before, after);
-      final monthKey = before.month;
-      final summaryUpdate = SummaryDeltaUtils.buildSummaryUpdate(
-        monthKey: monthKey,
-        batchId: batchId,
-        branchId: branchId,
-        delta: delta,
-      );
-      if (summaryUpdate.isNotEmpty) {
-        transaction.set(
-          _summaryRef(uid, monthKey),
-          summaryUpdate,
-          SetOptions(merge: true),
+    FirestoreDebugLog.operation('voidPayment', path: payRef.path);
+    try {
+      await _firestore.runTransaction((transaction) async {
+        final snap = await transaction.get(payRef);
+        if (!snap.exists) {
+          throw StateError(AppStrings.unknownError);
+        }
+        final beforeData = snap.data() ?? <String, dynamic>{};
+        if (beforeData[FirestoreKeys.voided] == true) {
+          return;
+        }
+        final before = PaymentSummarySnapshot.fromMap(beforeData);
+        final afterData = Map<String, dynamic>.from(beforeData)
+          ..[FirestoreKeys.voided] = true
+          ..[FirestoreKeys.status] = FirestoreKeys.statusVoided;
+        transaction.update(payRef, {
+          FirestoreKeys.voided: true,
+          FirestoreKeys.status: FirestoreKeys.statusVoided,
+        });
+        final after = PaymentSummarySnapshot.fromMap(afterData);
+        final delta = SummaryDeltaUtils.deltaSummary(before, after);
+        final monthKey = before.month;
+        final summaryUpdate = SummaryDeltaUtils.buildSummaryUpdate(
+          monthKey: monthKey,
+          batchId: batchId,
+          branchId: branchId,
+          delta: delta,
         );
-      }
-    });
+        if (summaryUpdate.isNotEmpty) {
+          transaction.set(
+            _summaryRef(uid, monthKey),
+            summaryUpdate,
+            SetOptions(merge: true),
+          );
+        }
+      });
+      FirestoreDebugLog.success('voidPayment', path: payRef.path);
+    } on Object catch (error, stackTrace) {
+      FirestoreDebugLog.failure(
+        'voidPayment',
+        error: error,
+        stackTrace: stackTrace,
+        path: payRef.path,
+      );
+      rethrow;
+    }
   }
 
   Future<Uint8List> _buildPdfFromPaymentMap({
@@ -301,6 +405,44 @@ class PaymentWriteDataSource {
     );
     final builder = await _pdfBuilderLoader();
     return builder.build(pdfInput);
+  }
+
+  String _buildShareMessageFromPaymentMap({
+    required Map<String, dynamic> data,
+    required _ReceiptContext context,
+    required String monthKey,
+  }) {
+    final amount = (data[FirestoreKeys.amount] as num?)?.toInt() ?? 0;
+    final batchFee = (data[FirestoreKeys.batchFee] as num?)?.toInt() ??
+        context.batchDefaultFee;
+    final receiptNo = data[FirestoreKeys.receiptNo] as String? ?? '';
+    return _buildShareMessage(
+      context: context,
+      monthKey: monthKey,
+      amount: amount,
+      batchFee: batchFee,
+      receiptNo: receiptNo,
+    );
+  }
+
+  String _buildShareMessage({
+    required _ReceiptContext context,
+    required String monthKey,
+    required int amount,
+    required int batchFee,
+    required String receiptNo,
+  }) {
+    final replacements = TemplateUtils.receiptReplacements(
+      student: context.student,
+      institute: context.institute,
+      branchName: context.branchName,
+      batchName: context.batchName,
+      monthKey: monthKey,
+      amount: amount,
+      batchFee: batchFee,
+      receiptNo: receiptNo,
+    );
+    return TemplateUtils.apply(context.messageTemplate, replacements);
   }
 
   ReceiptPdfInput _pdfInput({
@@ -407,12 +549,17 @@ class PaymentWriteDataSource {
       return null;
     }
 
-    final institute = _readInstitute(userSnap.data());
+    final userData = userSnap.data();
+    final institute = _readInstitute(userData);
+    final messageTemplate =
+        userData?[FirestoreKeys.messageTemplate] as String? ??
+        AppDefaults.messageTemplate;
     final branch = branchSnap.data() ?? <String, dynamic>{};
     final batch = batchSnap.data() ?? <String, dynamic>{};
 
     return _ReceiptContext(
       institute: institute,
+      messageTemplate: messageTemplate.trim(),
       branchName: branch[FirestoreKeys.name] as String? ?? '',
       batchName: batch[FirestoreKeys.name] as String? ?? '',
       danceStyle: batch[FirestoreKeys.danceStyle] as String? ?? '',
@@ -490,6 +637,7 @@ class PaymentWriteDataSource {
 class _ReceiptContext {
   const _ReceiptContext({
     required this.institute,
+    required this.messageTemplate,
     required this.branchName,
     required this.batchName,
     required this.danceStyle,
@@ -498,6 +646,7 @@ class _ReceiptContext {
   });
 
   final InstituteSettings institute;
+  final String messageTemplate;
   final String branchName;
   final String batchName;
   final String danceStyle;

@@ -175,11 +175,15 @@ abstract final class AppStrings {
   static const String confirmAndGenerateReceipt =
       'Confirm and generate receipt';
   static const String generatingReceipt = 'Generating receipt';
+  static const String preparingReceiptShare = 'Preparing receipt to share';
+  static const String deleting = 'Deleting';
   static const String paymentMode = 'Payment mode';
   static const String paidOnDate = 'Paid on';
   static const String markReceiptSentTitle = 'Receipt delivery';
   static const String markReceiptSentMessage =
-      'Was the receipt sent to {name}?';
+      'Was the receipt and message sent to {name}?';
+  static const String receiptAttachedWithMessage =
+      'Attached with this message';
   static const String validWhatsappRequired =
       'A valid WhatsApp number is required.';
   static const String receiptDetails = 'Receipt details';

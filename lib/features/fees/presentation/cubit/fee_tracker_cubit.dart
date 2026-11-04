@@ -27,6 +27,7 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
     required this._recordPaymentAndReceipt,
     required this._markReceiptSent,
     required this._buildReceiptPdf,
+    required this._buildReceiptShareMessage,
     required this._voidPayment,
   }) : super(const FeeTrackerLoading());
 
@@ -35,6 +36,7 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
   final RecordPaymentAndReceipt _recordPaymentAndReceipt;
   final MarkReceiptSent _markReceiptSent;
   final BuildReceiptPdf _buildReceiptPdf;
+  final BuildReceiptShareMessage _buildReceiptShareMessage;
   final VoidPayment _voidPayment;
 
   StreamSubscription<List<Student>>? _studentsSubscription;
@@ -177,6 +179,26 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
         PaymentDocumentId.fromStudentAndMonth(row.student.id, monthKey);
     return _buildReceiptPdf(
       BuildReceiptPdfParams(
+        branchId: branchId,
+        batchId: batchId,
+        paymentId: paymentId,
+        student: row.student,
+      ),
+    );
+  }
+
+  /// Builds the share message for a pending or sent row.
+  Future<Result<String>> buildShareMessageForRow(FeeRow row) async {
+    final branchId = _branchId;
+    final batchId = _batchId;
+    if (branchId == null || batchId == null) {
+      return const Err<String>(ValidationFailure(AppStrings.unknownError));
+    }
+    final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
+    final paymentId = row.payment?.id ??
+        PaymentDocumentId.fromStudentAndMonth(row.student.id, monthKey);
+    return _buildReceiptShareMessage(
+      BuildReceiptShareMessageParams(
         branchId: branchId,
         batchId: batchId,
         paymentId: paymentId,

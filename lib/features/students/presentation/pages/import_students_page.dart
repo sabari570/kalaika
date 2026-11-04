@@ -28,6 +28,7 @@ class ImportStudentsPage extends StatelessWidget {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: <String>['xlsx'],
+      withData: true,
     );
     if (result == null || result.files.isEmpty || !context.mounted) {
       return;
@@ -37,9 +38,18 @@ class ImportStudentsPage extends StatelessWidget {
       AppSnackBar.showError(context, AppStrings.importXlsNotSupported);
       return;
     }
-    final bytes = result.files.single.bytes;
+    var bytes = result.files.single.bytes;
     if (bytes == null) {
-      AppSnackBar.showError(context, AppStrings.unknownError);
+      final path = result.files.single.path;
+      if (path == null) {
+        if (context.mounted) {
+          AppSnackBar.showError(context, AppStrings.unknownError);
+        }
+        return;
+      }
+      bytes = await File(path).readAsBytes();
+    }
+    if (!context.mounted) {
       return;
     }
     await context.read<ImportStudentsCubit>().parseFile(bytes);

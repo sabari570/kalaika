@@ -68,13 +68,28 @@ String _normalizeHeader(String raw) {
   return switch (collapsed) {
     'full name' || 'name' || 'student name' => 'fullName',
     'phone' || 'phone no' || 'phone number' || 'mobile' => 'phone',
-    'whatsapp' || 'whatsapp no' || 'whatsapp number' => 'whatsapp',
+    'whatsapp' ||
+    'whatsapp no' ||
+    'whatsapp number' ||
+    'watsapp' ||
+    'watsapp no' ||
+    'watsapp number' =>
+      'whatsapp',
     'dob' || 'date of birth' => 'dob',
     'age' => 'age',
     'guardian' || 'guardian name' || 'parent' => 'guardian',
-    'guardian phone' || 'guardian phone number' || 'guardian contact' =>
+    'guardian phone' ||
+    'guardian phone number' ||
+    'guardian contact' =>
       'guardianPhone',
     'address' => 'address',
+    'index' ||
+    's no' ||
+    's.no' ||
+    'sl no' ||
+    'serial' ||
+    'serial no' =>
+      '',
     _ => collapsed,
   };
 }
@@ -83,10 +98,40 @@ String _cellText(Object? value) {
   if (value == null) {
     return '';
   }
+  if (value is CellValue) {
+    return switch (value) {
+      IntCellValue(:final value) => value.toString(),
+      DoubleCellValue(:final value) => _numericCellText(value),
+      TextCellValue(:final value) => value.toString(),
+      DateCellValue(:final year, :final month, :final day) =>
+        '${day.toString().padLeft(2, '0')}/'
+        '${month.toString().padLeft(2, '0')}/'
+        '$year',
+      BoolCellValue(:final value) => value.toString(),
+      FormulaCellValue(:final formula) => formula,
+      _ => value.toString(),
+    };
+  }
   if (value is DateTime) {
     return '${value.day.toString().padLeft(2, '0')}/'
         '${value.month.toString().padLeft(2, '0')}/'
         '${value.year}';
+  }
+  if (value is int) {
+    return value.toString();
+  }
+  if (value is double) {
+    return _numericCellText(value);
+  }
+  return value.toString();
+}
+
+String _numericCellText(double value) {
+  if (!value.isFinite) {
+    return '';
+  }
+  if (value == value.roundToDouble()) {
+    return value.toStringAsFixed(0);
   }
   return value.toString();
 }

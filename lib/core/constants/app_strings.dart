@@ -20,6 +20,22 @@ abstract final class AppStrings {
   static const String branchesPlaceholder =
       'Branch management will appear here.';
   static const String settingsPlaceholder = 'Settings will appear here.';
+  static const String settingsScreenTitle = 'Settings';
+  static const String settingsAccount = 'Account';
+  static const String settingsGoogleAccount = 'Google account';
+  static const String settingsInstitute = 'Institute details';
+  static const String settingsInstituteName = 'Institute name';
+  static const String settingsInstituteTagline = 'Tagline';
+  static const String settingsInstitutePhone = 'Contact phone';
+  static const String settingsInstituteSignatory = 'Signatory';
+  static const String settingsMessageTemplate = 'Receipts and messaging';
+  static const String settingsTemplatePreview = 'Message template preview';
+  static const String settingsSignOutSection = 'Session';
+  static const String settingsLoadFailed =
+      'Settings could not be loaded. Please try again.';
+  static const String appVersionLabel = 'Version';
+  static const String signInPrivacyNote =
+      'Your Google account is used only to sign in securely.';
 
   /// Style guide screen.
   static const String styleGuideTitle = 'Design system';
@@ -28,6 +44,8 @@ abstract final class AppStrings {
   /// Shared actions.
   static const String save = 'Save';
   static const String cancel = 'Cancel';
+  static const String yes = 'Yes';
+  static const String no = 'No';
   static const String confirm = 'Confirm';
   static const String retry = 'Retry';
   static const String delete = 'Delete';
@@ -61,15 +79,25 @@ abstract final class AppStrings {
   static const String batchFeeInvalid =
       'Monthly fee must be a positive whole number.';
   static const String batchNotFound = 'The batch could not be found.';
-  static const String cannotDeleteBatchWithStudents =
-      'This batch cannot be deleted while it contains students. '
-      'You may deactivate it instead.';
   static const String deactivateBatch = 'Deactivate batch';
   static const String deactivateBatchConfirm =
       'The batch will be hidden from the fee tracker. Existing '
       'student records are retained.';
   static const String deleteBatchConfirm =
       'This batch will be removed permanently.';
+  static const String deleteBatchWithStudentsConfirm =
+      'This batch has registered students. Deleting it will permanently '
+      'remove the batch, all student records, and all fee payments '
+      'associated with them. Are you sure you wish to proceed?';
+  static const String deleteStudentTitle = 'Delete student';
+  static const String deleteStudentConfirm =
+      'This student and their payment history will be removed permanently.';
+  static const String studentDeletedSuccess =
+      'The student has been removed successfully.';
+  static const String batchDeletedSuccess =
+      'The batch has been removed successfully.';
+  static const String branchDeletedSuccess =
+      'The branch has been removed successfully.';
   static const String batchFeeChangeTitle = 'Update batch fee';
   static const String batchFeeChangeMessage =
       'Choose how the updated fee should apply to students in '
@@ -183,6 +211,7 @@ abstract final class AppStrings {
       'No valid rows are available to import.';
   static const String batchFeeLabel = 'Batch fee';
   static const String continueWithGoogle = 'Continue with Google';
+  static const String signInWithGoogle = 'Sign in with Google';
   static const String signInTitle = 'Sign in';
   static const String signInSubtitle =
       'Use your Google account to access Kalaika.';
@@ -194,6 +223,9 @@ abstract final class AppStrings {
       'Sign in could not be completed. Please try again.';
   static const String firebaseInitFailed =
       'The application could not be initialized. Please restart the app.';
+  static const String firestorePermissionDenied =
+      'This action was denied by Firestore security rules. '
+      'Deploy the latest rules and try again.';
 
   /// Empty states.
   static const String noBranchesYet = 'No branches have been created.';

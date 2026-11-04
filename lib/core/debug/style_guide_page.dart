@@ -5,6 +5,7 @@ import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/app_text_field.dart';
 import 'package:feemanager/core/widgets/confirm_dialog.dart';
 import 'package:feemanager/core/widgets/empty_state.dart';
+import 'package:feemanager/core/widgets/google_sign_in_button.dart';
 import 'package:feemanager/core/widgets/gradient_button.dart';
 import 'package:feemanager/core/widgets/kalaika_async_body.dart';
 import 'package:feemanager/core/widgets/kalaika_card.dart';
@@ -181,13 +182,32 @@ class _StyleGuidePageState extends State<StyleGuidePage> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
                   GradientButton(
-                    label: 'Show snack bar',
+                    label: 'Show error snack bar',
                     onPressed: () {
                       AppSnackBar.showError(
                         context,
                         AppStrings.receiptGenerateFailed,
                       );
                     },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  GradientButton(
+                    label: 'Show success snack bar',
+                    onPressed: () {
+                      AppSnackBar.showSuccess(
+                        context,
+                        AppStrings.batchDeletedSuccess,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  GoogleSignInButton(
+                    onPressed: () {},
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  const GoogleSignInButton(
+                    isLoading: true,
+                    onPressed: null,
                   ),
                   const SizedBox(height: AppSpacing.md),
                   OutlinedCopperButton(

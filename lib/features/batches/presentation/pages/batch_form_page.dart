@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:feemanager/core/constants/app_routes.dart';
 import 'package:feemanager/core/constants/app_spacing.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/constants/batch_constants.dart';
@@ -125,33 +126,34 @@ class _BatchFormPageState extends State<BatchFormPage> {
     await context.read<BatchFormCubit>().save(feeScope: scope);
   }
 
-  Future<void> _onDeleteOrDeactivate(BuildContext context) async {
+  Future<void> _onDeleteBatch(BuildContext context) async {
     final cubit = context.read<BatchFormCubit>();
     final state = cubit.state;
     if (state is! BatchFormReady || !state.isEditing) {
       return;
     }
     final students = state.existingBatch?.studentCount ?? 0;
+    final bool? confirmed;
     if (students > 0) {
-      final confirmed = await ConfirmDialog.show(
+      confirmed = await ConfirmDialog.show(
         context,
-        title: AppStrings.deactivateBatch,
-        message: AppStrings.deactivateBatchConfirm,
-        confirmLabel: AppStrings.deactivateBatch,
+        title: AppStrings.delete,
+        message: AppStrings.deleteBatchWithStudentsConfirm,
+        confirmLabel: AppStrings.yes,
+        cancelLabel: AppStrings.no,
+        isDestructive: true,
       );
-      if (confirmed == true && context.mounted) {
-        await cubit.deactivateCurrentBatch();
-      }
-      return;
+    } else {
+      confirmed = await ConfirmDialog.show(
+        context,
+        title: AppStrings.delete,
+        message: AppStrings.deleteBatchConfirm,
+        confirmLabel: AppStrings.delete,
+        isDestructive: true,
+      );
     }
-    final confirmed = await ConfirmDialog.show(
-      context,
-      title: AppStrings.delete,
-      message: AppStrings.deleteBatchConfirm,
-      confirmLabel: AppStrings.delete,
-    );
     if (confirmed == true && context.mounted) {
-      await cubit.deleteEmptyBatch();
+      await cubit.deleteCurrentBatch();
     }
   }
 
@@ -165,7 +167,14 @@ class _BatchFormPageState extends State<BatchFormPage> {
           context.pop();
         }
         if (state is BatchFormRemoved) {
-          context.pop();
+          final branchId =
+              GoRouterState.of(context).pathParameters['branchId'];
+          if (branchId != null) {
+            context.go(AppRoutes.branchDetailPath(branchId));
+          } else {
+            context.pop();
+          }
+          AppSnackBar.showSuccess(context, AppStrings.batchDeletedSuccess);
         }
         if (state is BatchFormFailure) {
           AppSnackBar.showError(context, state.message);
@@ -211,7 +220,7 @@ class _BatchFormPageState extends State<BatchFormPage> {
                     icon: const Icon(Icons.delete_outline),
                     onPressed: isSaving
                         ? null
-                        : () => unawaited(_onDeleteOrDeactivate(context)),
+                        : () => unawaited(_onDeleteBatch(context)),
                   ),
               ],
             ),

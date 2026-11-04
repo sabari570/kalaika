@@ -52,6 +52,15 @@ abstract final class AppPalette {
 
   /// Primary button copper glow.
   static const Color copperGlow = Color(0x1AE07B2F);
+
+  /// Google Sign-In button fill (brand exception).
+  static const Color googleButtonSurface = Color(0xFFFFFFFF);
+
+  /// Google Sign-In button outline (brand exception).
+  static const Color googleButtonBorder = Color(0xFF747775);
+
+  /// Google Sign-In button label (brand exception).
+  static const Color googleButtonLabel = Color(0xFF1F1F1F);
 }
 
 /// Theme extension exposing Kalaika tokens beyond [ColorScheme].

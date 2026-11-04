@@ -117,6 +117,24 @@ class StudentRepositoryImpl implements StudentRepository {
   }
 
   @override
+  Future<Result<void>> deleteStudent(
+    String branchId,
+    String batchId,
+    String studentId,
+  ) async {
+    try {
+      await _remoteDataSource.deleteStudent(
+        branchId,
+        batchId,
+        studentId,
+      );
+      return const Success<void>(null);
+    } on Object catch (error, stackTrace) {
+      return Err<void>(ExceptionMapper.map(error, stackTrace));
+    }
+  }
+
+  @override
   Future<Result<bool>> hasDuplicateStudent({
     required String branchId,
     required String batchId,

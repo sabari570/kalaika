@@ -10,7 +10,9 @@ import 'package:feemanager/core/theme/app_colors.dart';
 import 'package:feemanager/core/utils/age_utils.dart';
 import 'package:feemanager/core/utils/phone_utils.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
+import 'package:feemanager/core/widgets/confirm_dialog.dart';
 import 'package:feemanager/core/widgets/kalaika_card.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
 import 'package:feemanager/core/widgets/kalaika_screen_body.dart';
 import 'package:feemanager/core/widgets/status_chip.dart';
 import 'package:feemanager/features/fees/domain/usecases/payment_receipt_actions.dart';
@@ -47,12 +49,26 @@ class StudentDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<StudentDetailCubit, StudentDetailState>(
+    return BlocConsumer<StudentDetailCubit, StudentDetailState>(
+      listener: (context, state) {
+        if (state is StudentDetailRemoved) {
+          AppSnackBar.showSuccess(
+            context,
+            AppStrings.studentDeletedSuccess,
+          );
+          context.pop();
+        }
+      },
       builder: (context, state) {
         return switch (state) {
           StudentDetailLoading() => const Scaffold(
             body: KalaikaScreenBody(
               child: StudentDetailSkeleton(),
+            ),
+          ),
+          StudentDetailDeleting() => const Scaffold(
+            body: KalaikaScreenBody(
+              child: Center(child: KalaikaProgressIndicator()),
             ),
           ),
           StudentDetailFailure(:final message) => Scaffold(
@@ -67,6 +83,11 @@ class StudentDetailPage extends StatelessWidget {
               batchId: batchId,
               studentId: studentId,
             ),
+          StudentDetailRemoved() => const Scaffold(
+            body: KalaikaScreenBody(
+              child: Center(child: KalaikaProgressIndicator()),
+            ),
+          ),
         };
       },
     );
@@ -106,6 +127,11 @@ class _StudentDetailBody extends StatelessWidget {
             onPressed: () => context.push(
               AppRoutes.studentEditPath(branchId, batchId, studentId),
             ),
+          ),
+          IconButton(
+            tooltip: AppStrings.delete,
+            icon: const Icon(Icons.delete_outline),
+            onPressed: () => unawaited(_confirmDelete(context)),
           ),
         ],
       ),
@@ -208,6 +234,23 @@ class _StudentDetailBody extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: AppStrings.deleteStudentTitle,
+      message: AppStrings.deleteStudentConfirm,
+      confirmLabel: AppStrings.delete,
+      isDestructive: true,
+    );
+    if (confirmed == true && context.mounted) {
+      final error =
+          await context.read<StudentDetailCubit>().deleteCurrentStudent();
+      if (error != null && context.mounted) {
+        AppSnackBar.showError(context, error);
+      }
+    }
   }
 
   FeeDisplayStatus _statusFor(String status) {

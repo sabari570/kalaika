@@ -42,6 +42,13 @@ abstract class StudentRepository {
     required bool isActive,
   });
 
+  /// Permanently removes a student and their payment records.
+  Future<Result<void>> deleteStudent(
+    String branchId,
+    String batchId,
+    String studentId,
+  );
+
   /// Returns true when another student shares WhatsApp and name.
   Future<Result<bool>> hasDuplicateStudent({
     required String branchId,

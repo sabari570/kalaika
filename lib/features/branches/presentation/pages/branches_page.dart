@@ -42,7 +42,7 @@ class BranchesPage extends StatelessWidget {
     }
     switch (result) {
       case Success<void>():
-        break;
+        AppSnackBar.showSuccess(context, AppStrings.branchDeletedSuccess);
       case Err(:final failure):
         AppSnackBar.showError(context, failure.message);
     }

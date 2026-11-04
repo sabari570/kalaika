@@ -18,6 +18,9 @@ abstract final class ExceptionMapper {
       return const ServerFailure(AppStrings.receiptGenerateFailed);
     }
     if (error is FirebaseException) {
+      if (error.code == 'permission-denied') {
+        return const PermissionFailure(AppStrings.firestorePermissionDenied);
+      }
       return const UnknownFailure(AppStrings.firebaseInitFailed);
     }
     if (error is AuthFailure) {

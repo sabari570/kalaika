@@ -4,6 +4,7 @@ import 'package:feemanager/features/students/data/datasources/student_remote_dat
 import 'package:feemanager/features/students/data/repositories/student_repository_impl.dart';
 import 'package:feemanager/features/students/domain/repositories/student_repository.dart';
 import 'package:feemanager/features/students/domain/usecases/create_student.dart';
+import 'package:feemanager/features/students/domain/usecases/delete_student.dart';
 import 'package:feemanager/features/students/domain/usecases/get_student.dart';
 import 'package:feemanager/features/students/domain/usecases/set_student_active.dart';
 import 'package:feemanager/features/students/domain/usecases/student_import_usecases.dart';
@@ -28,6 +29,7 @@ void configureStudentsDependencies() {
     ..registerLazySingleton(() => CreateStudent(sl<StudentRepository>()))
     ..registerLazySingleton(() => UpdateStudent(sl<StudentRepository>()))
     ..registerLazySingleton(() => SetStudentActive(sl<StudentRepository>()))
+    ..registerLazySingleton(() => DeleteStudent(sl<StudentRepository>()))
     ..registerLazySingleton(() => HasDuplicateStudent(sl<StudentRepository>()))
     ..registerLazySingleton(() => ParseStudentImport(sl<StudentRepository>()))
     ..registerLazySingleton(() => ImportStudents(sl<StudentRepository>()))
@@ -54,6 +56,7 @@ void configureStudentsDependencies() {
       () => StudentDetailCubit(
         getStudent: sl<GetStudent>(),
         getPaymentHistory: sl<GetStudentPaymentHistory>(),
+        deleteStudent: sl<DeleteStudent>(),
       ),
     )
     ..registerFactory(

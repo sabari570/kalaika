@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/constants/firestore_keys.dart';
 import 'package:feemanager/core/utils/firebase_user_scope.dart';
+import 'package:feemanager/core/utils/firestore_payment_cleanup.dart';
 import 'package:feemanager/features/batches/data/models/batch_model.dart';
 import 'package:feemanager/features/batches/domain/entities/batch.dart';
 import 'package:feemanager/features/batches/domain/entities/batch_draft.dart';
@@ -36,6 +37,16 @@ class BatchRemoteDataSource {
   ) {
     return _batchesRef(uid, branchId).doc(batchId).collection(
       FirestoreKeys.students,
+    );
+  }
+
+  CollectionReference<Map<String, dynamic>> _paymentsRef(
+    String uid,
+    String branchId,
+    String batchId,
+  ) {
+    return _batchesRef(uid, branchId).doc(batchId).collection(
+      FirestoreKeys.payments,
     );
   }
 
@@ -159,7 +170,7 @@ class BatchRemoteDataSource {
     return BatchModel.fromSnapshot(saved).toEntity();
   }
 
-  /// Deletes a batch with no students and decrements branch batch count.
+  /// Deletes a batch, its students, payments, and summary rollups.
   Future<void> deleteBatch(String branchId, String batchId) async {
     final uid = FirebaseUserScope.requireUid();
     final batchRef = _batchesRef(uid, branchId).doc(batchId);
@@ -169,15 +180,36 @@ class BatchRemoteDataSource {
       return;
     }
     final batch = BatchModel.fromSnapshot(snapshot);
-    if (batch.studentCount > 0) {
-      throw StateError(AppStrings.cannotDeleteBatchWithStudents);
+    final activeStudentCount = batch.studentCount;
+    final batchIsActive = batch.isActive;
+
+    final paymentsSnap = await _paymentsRef(uid, branchId, batchId).get();
+    await FirestorePaymentCleanup.revertSummariesAndDeletePayments(
+      firestore: _firestore,
+      uid: uid,
+      branchId: branchId,
+      batchId: batchId,
+      paymentDocs: paymentsSnap.docs,
+    );
+
+    final studentsSnap = await _studentsRef(uid, branchId, batchId).get();
+    await FirestorePaymentCleanup.deleteDocumentsInChunks(
+      _firestore,
+      studentsSnap.docs.map((doc) => doc.reference),
+    );
+
+    final branchUpdate = <String, Object?>{
+      FirestoreKeys.batchCount: FieldValue.increment(-1),
+    };
+    if (batchIsActive && activeStudentCount > 0) {
+      branchUpdate[FirestoreKeys.studentCount] =
+          FieldValue.increment(-activeStudentCount);
     }
+
     await _firestore.runTransaction((transaction) async {
       transaction
         ..delete(batchRef)
-        ..update(branchRef, <String, Object?>{
-          FirestoreKeys.batchCount: FieldValue.increment(-1),
-        });
+        ..update(branchRef, branchUpdate);
     });
   }
 

@@ -183,6 +183,7 @@ Gradients:
 ### 5.4 Shared components (`core/widgets/`)
 - `KalaikaLogo` (shows `assets/images/logo.png` if present; otherwise a gold-gradient "KALAIKA" Cinzel wordmark with "By Lakshmi Kumaran" beneath; use `errorBuilder`)
 - `GradientButton` (primary, copper gradient, `onCopper` text, loading state)
+- `GoogleSignInButton` (white branded Google sign-in for Login)
 - `OutlinedCopperButton` (secondary)
 - `KalaikaCard` (surface, border, optional tap ripple)
 - `StatTile` (label, large value in gold, optional icon)
@@ -192,7 +193,7 @@ Gradients:
 - `StatusChip` (Unpaid, Pending send, Sent)
 - `AppTextField` (filled with `surfaceHigh`, copper focus border)
 - `MonthSelector` (previous and next arrows with month and year centered; tap opens a month-year picker)
-- `ConfirmDialog`, `LoadingOverlay`, `AppSnackBar`
+- `ConfirmDialog`, `LoadingOverlay`, `AppSnackBar` (`showSuccess`, `showError`; root messenger survives navigation). After batch delete, navigation returns to branch detail with a success snack bar.
 - `KalaikaProgressIndicator`, `KalaikaSkeletonBox`, `KalaikaListRowSkeleton`, `KalaikaScreenBody`, `KalaikaAsyncBody`, `KalaikaAnimatedMetric`
 
 ### 5.5 Motion
@@ -239,7 +240,7 @@ Auth redirect: unauthenticated users go to `/login`; authenticated users visitin
 
 ### 6.3 Login
 - Logo at the top, title "Sign in" (Cinzel), one line of subtext: "Use your Google account to access Kalaika."
-- One primary button: "Continue with Google". Loading state while signing in. Failures show a snackbar with a formal, readable message. A cancelled sign-in is ignored silently.
+- One primary control: branded white **Sign in with Google** button (`GoogleSignInButton` with `assets/images/google_icon.png`), optionally within a surface card. Loading state while signing in. Failures show a snackbar with a formal, readable message. A cancelled sign-in is ignored silently.
 - After the first successful sign-in, ensure `users/{uid}` exists (create it with the defaults in 7.1).
 
 ### 6.4 Dashboard (Home tab 1)
@@ -277,7 +278,7 @@ Fields:
 
 Changing the batch fee on an existing batch shows a dialog with two choices: "Apply to new students only" (default) or "Apply to all active students" (updates every active student's `monthlyFee` in chunked batch writes and adjusts `expectedMonthlyTotal` once). Payments already recorded are never changed.
 
-Batch deletion is blocked while it has students; offer "Deactivate batch" instead (`isActive: false`).
+Batch deletion removes the batch document, all students, all payments, and reverses monthly summary rollups. When the batch still has students, show a formal confirmation dialog with Yes and No before proceeding. Deactivate batch remains available separately when needed (`isActive: false`).
 
 ### 6.9 Batch detail (two tabs: Fees and Students)
 
@@ -317,7 +318,7 @@ Bottom sheet opened from an unchecked checkbox:
 - Payment mode chips: Cash, UPI, Bank transfer, Other
 - Paid date (defaults to today; date picker)
 - Optional note
-- Primary button: "Confirm and generate receipt"
+- Primary button: "Confirm payment"
 
 On confirm:
 1. Show a loading state; disable sheet dismissal.
@@ -351,6 +352,7 @@ Use case `MarkReceiptSent` updates the payment document: `status: "sent"`, `sent
 - WhatsApp message template (multi-line editor) with a placeholder reference and a live preview, plus "Reset to default"
 - Account card (name, email, avatar) and "Sign out" with a confirm dialog
 - App version
+- Phase 1 presentation: read-only institute and template summary on the Settings tab; edit screens follow in a later pass.
 
 Default message template (formal):
 

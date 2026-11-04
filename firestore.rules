@@ -114,7 +114,7 @@ service cloud.firestore {
           match /payments/{paymentId} {
             allow read: if isOwner(uid);
             allow create: if isOwner(uid) && paymentCreateValid(uid);
-            allow delete: if false;
+            allow delete: if isOwner(uid);
             allow update: if isOwner(uid)
               && (paymentSentTransitionOnly() || paymentVoidTransitionOnly());
           }

@@ -21,7 +21,8 @@ import 'package:feemanager/features/branches/presentation/pages/branch_detail_pa
 import 'package:feemanager/features/branches/presentation/pages/branch_form_page.dart';
 import 'package:feemanager/features/branches/presentation/pages/branches_page.dart';
 import 'package:feemanager/features/dashboard/presentation/pages/dashboard_placeholder_page.dart';
-import 'package:feemanager/features/settings/presentation/pages/settings_placeholder_page.dart';
+import 'package:feemanager/features/settings/presentation/cubit/settings_cubit.dart';
+import 'package:feemanager/features/settings/presentation/pages/settings_page.dart';
 import 'package:feemanager/features/students/presentation/cubit/import_students_cubit.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_detail_cubit.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_form_cubit.dart';
@@ -112,7 +113,10 @@ GoRouter createAppRouter() {
                 pageBuilder: (context, state) {
                   return _fadePage(
                     state,
-                    const SettingsPlaceholderPage(),
+                    BlocProvider(
+                      create: (_) => sl<SettingsCubit>()..started(),
+                      child: const SettingsPage(),
+                    ),
                   );
                 },
               ),

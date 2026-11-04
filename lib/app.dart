@@ -1,6 +1,7 @@
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/router/app_router.dart';
 import 'package:feemanager/core/theme/app_theme.dart';
+import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -21,6 +22,7 @@ class _KalaikaAppState extends State<KalaikaApp> {
     return MaterialApp.router(
       title: AppStrings.appTitle,
       theme: AppTheme.dark(),
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       routerConfig: _router,
       builder: (context, child) {
         final scaled = MediaQuery.of(context).copyWith(

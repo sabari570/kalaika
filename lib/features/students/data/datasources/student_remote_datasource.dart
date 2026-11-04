@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/constants/firestore_keys.dart';
 import 'package:feemanager/core/utils/firebase_user_scope.dart';
+import 'package:feemanager/core/utils/firestore_payment_cleanup.dart';
 import 'package:feemanager/features/students/data/models/student_model.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
 import 'package:feemanager/features/students/domain/entities/student_draft.dart';
@@ -132,6 +133,38 @@ class StudentRemoteDataSource {
     }
     final saved = await studentRef.get();
     return StudentModel.fromSnapshot(saved).toEntity();
+  }
+
+  /// Permanently removes a student and their payments.
+  Future<void> deleteStudent(
+    String branchId,
+    String batchId,
+    String studentId,
+  ) async {
+    final uid = FirebaseUserScope.requireUid();
+    final studentRef = _studentsRef(uid, branchId, batchId).doc(studentId);
+    final snapshot = await studentRef.get();
+    if (!snapshot.exists) {
+      throw StateError(AppStrings.studentNotFound);
+    }
+    final paymentsSnap = await _paymentsRef(uid, branchId, batchId).get();
+    final paymentDocs = paymentsSnap.docs.where((doc) {
+      final dataStudentId =
+          doc.data()[FirestoreKeys.studentId] as String? ?? '';
+      if (dataStudentId == studentId) {
+        return true;
+      }
+      return doc.id.startsWith('${studentId}_');
+    });
+    await FirestorePaymentCleanup.revertSummariesAndDeletePayments(
+      firestore: _firestore,
+      uid: uid,
+      branchId: branchId,
+      batchId: batchId,
+      paymentDocs: paymentDocs,
+    );
+    await studentRef.delete();
+    await _syncBatchAndBranchCounters(uid, branchId, batchId);
   }
 
   /// Activates or deactivates a student and updates counters.

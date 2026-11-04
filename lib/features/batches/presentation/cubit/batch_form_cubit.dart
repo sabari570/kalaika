@@ -219,26 +219,14 @@ class BatchFormCubit extends Cubit<BatchFormState> {
     await _persist(draft, current.existingBatch);
   }
 
-  /// Deletes the batch when it has no students.
-  Future<void> deleteEmptyBatch() async {
+  /// Deletes the batch and all students and payments after confirmation.
+  Future<void> deleteCurrentBatch() async {
     final branchId = _branchId;
     final batchId = _batchId;
     if (branchId == null || batchId == null) {
       return;
     }
     final current = state;
-    final existing = current is BatchFormReady ? current.existingBatch : null;
-    if (existing != null && existing.studentCount > 0) {
-      if (current is BatchFormReady) {
-        emit(
-          BatchFormFailure(
-            AppStrings.cannotDeleteBatchWithStudents,
-            current.draft,
-          ),
-        );
-      }
-      return;
-    }
     final result = await _deleteBatch(
       DeleteBatchParams(branchId: branchId, batchId: batchId),
     );

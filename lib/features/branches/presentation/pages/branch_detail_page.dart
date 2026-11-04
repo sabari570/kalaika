@@ -1,7 +1,9 @@
+import 'package:feemanager/core/constants/app_durations.dart';
 import 'package:feemanager/core/constants/app_routes.dart';
 import 'package:feemanager/core/constants/app_spacing.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
+import 'package:feemanager/core/theme/app_motion.dart';
 import 'package:feemanager/core/utils/batch_schedule_formatter.dart';
 import 'package:feemanager/core/widgets/empty_state.dart';
 import 'package:feemanager/core/widgets/kalaika_async_body.dart';
@@ -88,39 +90,56 @@ class BranchDetailPage extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (batches.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: EmptyState(
-                      message: AppStrings.noBatchesYet,
-                      actionLabel: AppStrings.newBatch,
-                      onAction: () =>
-                          context.push(AppRoutes.batchNewPath(branchId)),
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.screenHorizontal,
-                      0,
-                      AppSpacing.screenHorizontal,
-                      AppSpacing.xxl * 4,
-                    ),
-                    sliver: SliverList.separated(
-                      itemCount: batches.length,
-                      separatorBuilder: (_, _) =>
-                          const SizedBox(height: AppSpacing.md),
-                      itemBuilder: (context, index) {
-                        final batch = batches[index];
-                        return _BatchListCard(
-                          batch: batch,
-                          onTap: () => context.push(
-                            AppRoutes.batchDetailPath(branchId, batch.id),
+                SliverToBoxAdapter(
+                  child: AnimatedSwitcher(
+                    duration: AppMotion.listCrossFade(context),
+                    switchInCurve: AppDurations.easeOut,
+                    switchOutCurve: AppDurations.easeOut,
+                    child: batches.isEmpty
+                        ? SizedBox(
+                            key: const ValueKey<String>('batches-empty'),
+                            height: MediaQuery.sizeOf(context).height * 0.45,
+                            child: EmptyState(
+                              message: AppStrings.noBatchesYet,
+                              actionLabel: AppStrings.newBatch,
+                              onAction: () => context.push(
+                                AppRoutes.batchNewPath(branchId),
+                              ),
+                            ),
+                          )
+                        : Padding(
+                            key: ValueKey<String>(
+                              'batches-${batches.length}',
+                            ),
+                            padding: const EdgeInsets.fromLTRB(
+                              AppSpacing.screenHorizontal,
+                              0,
+                              AppSpacing.screenHorizontal,
+                              AppSpacing.xxl * 4,
+                            ),
+                            child: Column(
+                              children: <Widget>[
+                                for (var i = 0; i < batches.length; i++)
+                                  ...<Widget>[
+                                    if (i > 0)
+                                      const SizedBox(
+                                        height: AppSpacing.md,
+                                      ),
+                                    _BatchListCard(
+                                    batch: batches[i],
+                                    onTap: () => context.push(
+                                      AppRoutes.batchDetailPath(
+                                        branchId,
+                                        batches[i].id,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
                           ),
-                        );
-                      },
-                    ),
                   ),
+                ),
               ],
             ),
                 ),

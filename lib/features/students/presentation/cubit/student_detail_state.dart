@@ -38,3 +38,13 @@ final class StudentDetailFailure extends StudentDetailState {
   @override
   List<Object?> get props => <Object?>[message];
 }
+
+/// Delete in progress.
+final class StudentDetailDeleting extends StudentDetailState {
+  const StudentDetailDeleting();
+}
+
+/// Student was deleted successfully.
+final class StudentDetailRemoved extends StudentDetailState {
+  const StudentDetailRemoved();
+}

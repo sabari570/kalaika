@@ -2,7 +2,7 @@ import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/usecase/usecase.dart';
 import 'package:feemanager/features/batches/domain/repositories/batch_repository.dart';
 
-/// Deletes a batch that has no students.
+/// Deletes a batch and all related students and payments.
 class DeleteBatch implements UseCase<void, DeleteBatchParams> {
   /// Creates the use case.
   DeleteBatch(this._repository);

@@ -179,27 +179,19 @@ class _RecordPaymentConfirmDialogState
                 style: theme.bodySmall?.copyWith(color: colors.creamMuted),
               ),
               const SizedBox(height: AppSpacing.lg),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: OutlinedCopperButton(
-                      label: AppStrings.cancel,
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
+              OutlinedCopperButton(
+                label: AppStrings.cancel,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              GradientButton(
+                label: AppStrings.confirmPayment,
+                onPressed: () => Navigator.of(context).pop(
+                  RecordPaymentFormData(
+                    mode: _mode,
+                    paidOn: _paidOn,
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: GradientButton(
-                      label: AppStrings.confirmAndGenerateReceipt,
-                      onPressed: () => Navigator.of(context).pop(
-                        RecordPaymentFormData(
-                          mode: _mode,
-                          paidOn: _paidOn,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),

@@ -91,6 +91,15 @@ abstract final class SummaryDeltaUtils {
     );
   }
 
+  /// Sums two deltas for grouped summary writes.
+  static SummaryDelta combine(SummaryDelta a, SummaryDelta b) {
+    return SummaryDelta(
+      collected: a.collected + b.collected,
+      paidCount: a.paidCount + b.paidCount,
+      sentCount: a.sentCount + b.sentCount,
+    );
+  }
+
   /// Difference between two payment snapshots.
   static SummaryDelta deltaSummary(
     PaymentSummarySnapshot? before,

@@ -20,7 +20,7 @@ abstract class BatchRepository {
     BatchDraft draft,
   );
 
-  /// Deletes an empty batch and decrements branch batch count.
+  /// Deletes a batch and decrements branch batch count.
   Future<Result<void>> deleteBatch(String branchId, String batchId);
 
   /// Marks a batch inactive when students still exist.

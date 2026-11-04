@@ -156,6 +156,14 @@ class _SettingsContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           const SectionHeader(title: AppStrings.settingsInstitute),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => context.push(AppRoutes.settingsInstitute),
+              child: const Text(AppStrings.settingsEditInstitute),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           KalaikaCard(
             child: Column(
               children: <Widget>[
@@ -184,6 +192,14 @@ class _SettingsContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           const SectionHeader(title: AppStrings.settingsMessageTemplate),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => context.push(AppRoutes.settingsTemplate),
+              child: const Text(AppStrings.settingsEditTemplate),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           KalaikaCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

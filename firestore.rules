@@ -73,6 +73,17 @@ service cloud.firestore {
         && request.resource.data.receiptSeq == 1;
     }
 
+    // Collection group reads (dashboard batches, pending payments).
+    match /{path=**}/batches/{batchId} {
+      allow read: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /{path=**}/payments/{paymentId} {
+      allow read: if request.auth != null
+        && resource.data.ownerId == request.auth.uid;
+    }
+
     match /users/{uid} {
       allow read, write: if isOwner(uid);
 

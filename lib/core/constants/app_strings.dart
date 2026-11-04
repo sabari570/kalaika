@@ -14,12 +14,34 @@ abstract final class AppStrings {
   static const String navBranches = 'Branches';
   static const String navSettings = 'Settings';
 
+  /// Dashboard.
+  static const String dashboardWelcome = 'Welcome, {name}';
+  static const String dashboardStatCollected = 'Collected';
+  static const String dashboardStatPending = 'Pending amount';
+  static const String dashboardStatReceiptsSent = 'Receipts sent';
+  static const String dashboardStatActiveStudents = 'Active students';
+  static const String dashboardStatSentOverPaid = '{sent} of {paid}';
+  static const String dashboardCollectionProgress = 'Collection progress';
+  static const String dashboardReceiptsPendingTitle = 'Receipts pending';
+  static const String dashboardReceiptsPendingCount =
+      '{count} receipts await delivery';
+  static const String dashboardReviewPending = 'Review';
+  static const String dashboardBranchesSection = 'Branches';
+  static const String dashboardBranchBatches = '{count} batches';
+  static const String dashboardBatchPaidOfTotal = 'Paid {paid} of {total}';
+  static const String dashboardNoBranches =
+      'No branches have been created.';
+  static const String dashboardLoadFailed =
+      'The dashboard could not be loaded. Please try again.';
+  static const String pendingReceiptsTitle = 'Receipts pending';
+  static const String pendingReceiptsEmpty =
+      'All recorded receipts have been sent.';
+  static const String pendingReceiptsLoadFailed =
+      'Pending receipts could not be loaded. Please try again.';
+
   /// Placeholder screen titles (M1).
-  static const String dashboardPlaceholder =
-      'Dashboard content will appear here.';
   static const String branchesPlaceholder =
       'Branch management will appear here.';
-  static const String settingsPlaceholder = 'Settings will appear here.';
   static const String settingsScreenTitle = 'Settings';
   static const String settingsAccount = 'Account';
   static const String settingsGoogleAccount = 'Google account';
@@ -28,8 +50,26 @@ abstract final class AppStrings {
   static const String settingsInstituteTagline = 'Tagline';
   static const String settingsInstitutePhone = 'Contact phone';
   static const String settingsInstituteSignatory = 'Signatory';
+  static const String settingsInstituteAddress = 'Address';
+  static const String settingsInstituteFooter = 'Receipt footer note';
+  static const String settingsEditInstitute = 'Edit institute details';
+  static const String settingsEditTemplate = 'Edit message template';
   static const String settingsMessageTemplate = 'Receipts and messaging';
   static const String settingsTemplatePreview = 'Message template preview';
+  static const String settingsTemplateEditor = 'Message template';
+  static const String settingsTemplatePlaceholders =
+      'Placeholders: {recipient_name}, {student_name}, {amount}, '
+      '{batch_fee}, {month}, {year}, {batch_name}, {branch_name}, '
+      '{receipt_no}, {receipt_url}, {institute_name}';
+  static const String settingsResetTemplate = 'Reset to default';
+  static const String settingsInstituteSaved =
+      'Institute details have been saved.';
+  static const String settingsTemplateSaved =
+      'The message template has been saved.';
+  static const String settingsSaveFailed =
+      'Your changes could not be saved. Please try again.';
+  static const String settingsInstituteNameRequired =
+      'Institute name is required.';
   static const String settingsSignOutSection = 'Session';
   static const String settingsLoadFailed =
       'Settings could not be loaded. Please try again.';

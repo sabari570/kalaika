@@ -23,25 +23,41 @@ class OutlinedCopperButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        minimumSize: const Size.fromHeight(48),
-        side: BorderSide(color: colors.copper),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadius.button),
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.xl,
-          vertical: AppSpacing.md,
-        ),
+    final enabled = onPressed != null;
+    final borderColor =
+        enabled ? colors.copper : colors.copper.withValues(alpha: 0.4);
+    final labelColor =
+        enabled ? colors.copper : colors.copper.withValues(alpha: 0.4);
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppRadius.button),
+        border: Border.all(color: borderColor),
       ),
-      child: Text(
-        label,
-        style: GoogleFonts.poppins(
-          fontSize: AppTextTheme.bodySize,
-          fontWeight: FontWeight.w600,
-          color: colors.copper,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(AppRadius.button),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.xl,
+                vertical: AppSpacing.md,
+              ),
+              child: Center(
+                child: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: AppTextTheme.bodySize,
+                    fontWeight: FontWeight.w600,
+                    color: labelColor,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

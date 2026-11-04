@@ -1,4 +1,5 @@
 import 'package:feemanager/features/auth/domain/entities/app_user.dart';
+import 'package:feemanager/features/fees/domain/entities/institute_settings.dart';
 import 'package:feemanager/features/settings/data/datasources/settings_remote_datasource.dart';
 import 'package:feemanager/features/settings/domain/entities/user_settings_view.dart';
 import 'package:feemanager/features/settings/domain/repositories/settings_repository.dart';
@@ -6,12 +7,23 @@ import 'package:feemanager/features/settings/domain/repositories/settings_reposi
 /// Firestore implementation of [SettingsRepository].
 class SettingsRepositoryImpl implements SettingsRepository {
   /// Creates the repository.
-  SettingsRepositoryImpl({required this._remoteDataSource});
+  SettingsRepositoryImpl({required this.remoteDataSource});
 
-  final SettingsRemoteDataSource _remoteDataSource;
+  /// Remote Firestore access.
+  final SettingsRemoteDataSource remoteDataSource;
 
   @override
   Stream<UserSettingsView> watchForUser(AppUser user) {
-    return _remoteDataSource.watchForUser(user);
+    return remoteDataSource.watchForUser(user);
+  }
+
+  @override
+  Future<void> updateInstitute(InstituteSettings institute) {
+    return remoteDataSource.updateInstitute(institute);
+  }
+
+  @override
+  Future<void> updateMessageTemplate(String template) {
+    return remoteDataSource.updateMessageTemplate(template);
   }
 }

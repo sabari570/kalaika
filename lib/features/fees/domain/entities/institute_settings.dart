@@ -30,6 +30,25 @@ class InstituteSettings extends Equatable {
   /// Signatory line.
   final String signatory;
 
+  /// Returns a copy with the given fields replaced.
+  InstituteSettings copyWith({
+    String? name,
+    String? tagline,
+    List<String>? addressLines,
+    String? phone,
+    String? footerNote,
+    String? signatory,
+  }) {
+    return InstituteSettings(
+      name: name ?? this.name,
+      tagline: tagline ?? this.tagline,
+      addressLines: addressLines ?? this.addressLines,
+      phone: phone ?? this.phone,
+      footerNote: footerNote ?? this.footerNote,
+      signatory: signatory ?? this.signatory,
+    );
+  }
+
   @override
   List<Object?> get props => <Object?>[
     name,

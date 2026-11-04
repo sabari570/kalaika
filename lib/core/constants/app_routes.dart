@@ -18,6 +18,15 @@ abstract final class AppRoutes {
   /// Settings tab.
   static const String settings = '/home/settings';
 
+  /// Edit institute details.
+  static const String settingsInstitute = '/home/settings/institute';
+
+  /// Edit WhatsApp message template.
+  static const String settingsTemplate = '/home/settings/template';
+
+  /// Pending receipts review from the dashboard.
+  static const String dashboardPending = '/home/dashboard/pending-receipts';
+
   /// Debug-only design system gallery.
   static const String styleGuide = '/debug/style-guide';
 

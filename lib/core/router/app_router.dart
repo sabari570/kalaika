@@ -20,9 +20,16 @@ import 'package:feemanager/features/branches/presentation/cubit/branch_list_cubi
 import 'package:feemanager/features/branches/presentation/pages/branch_detail_page.dart';
 import 'package:feemanager/features/branches/presentation/pages/branch_form_page.dart';
 import 'package:feemanager/features/branches/presentation/pages/branches_page.dart';
-import 'package:feemanager/features/dashboard/presentation/pages/dashboard_placeholder_page.dart';
+import 'package:feemanager/features/dashboard/presentation/cubit/dashboard_cubit.dart';
+import 'package:feemanager/features/dashboard/presentation/cubit/pending_receipts_cubit.dart';
+import 'package:feemanager/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:feemanager/features/dashboard/presentation/pages/pending_receipts_page.dart';
+import 'package:feemanager/features/settings/presentation/cubit/institute_settings_form_cubit.dart';
 import 'package:feemanager/features/settings/presentation/cubit/settings_cubit.dart';
+import 'package:feemanager/features/settings/presentation/cubit/template_settings_form_cubit.dart';
+import 'package:feemanager/features/settings/presentation/pages/institute_settings_page.dart';
 import 'package:feemanager/features/settings/presentation/pages/settings_page.dart';
+import 'package:feemanager/features/settings/presentation/pages/template_settings_page.dart';
 import 'package:feemanager/features/students/presentation/cubit/import_students_cubit.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_detail_cubit.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_form_cubit.dart';
@@ -84,9 +91,29 @@ GoRouter createAppRouter() {
                 pageBuilder: (context, state) {
                   return _fadePage(
                     state,
-                    const DashboardPlaceholderPage(),
+                    BlocProvider(
+                      create: (_) => sl<DashboardCubit>()..started(),
+                      child: const DashboardPage(),
+                    ),
                   );
                 },
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: 'pending-receipts',
+                    parentNavigatorKey: rootKey,
+                    builder: (context, state) {
+                      final monthKey = state.extra as String? ?? '';
+                      return BlocProvider(
+                        create: (_) {
+                          final cubit = sl<PendingReceiptsCubit>();
+                          unawaited(cubit.started(monthKey));
+                          return cubit;
+                        },
+                        child: PendingReceiptsPage(monthKey: monthKey),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),
@@ -119,6 +146,30 @@ GoRouter createAppRouter() {
                     ),
                   );
                 },
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: 'institute',
+                    parentNavigatorKey: rootKey,
+                    builder: (context, state) {
+                      return BlocProvider(
+                        create: (_) =>
+                            sl<InstituteSettingsFormCubit>()..started(),
+                        child: const InstituteSettingsPage(),
+                      );
+                    },
+                  ),
+                  GoRoute(
+                    path: 'template',
+                    parentNavigatorKey: rootKey,
+                    builder: (context, state) {
+                      return BlocProvider(
+                        create: (_) =>
+                            sl<TemplateSettingsFormCubit>()..started(),
+                        child: const TemplateSettingsPage(),
+                      );
+                    },
+                  ),
+                ],
               ),
             ],
           ),

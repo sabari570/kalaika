@@ -22,6 +22,11 @@ abstract final class FirestoreKeys {
 
   /// Monthly rollup documents.
   static const String summaries = 'summaries';
+  static const String collected = 'collected';
+  static const String paidCount = 'paidCount';
+  static const String sentCount = 'sentCount';
+  static const String byBatch = 'byBatch';
+  static const String updatedAt = 'updatedAt';
 
   /// Branch collection segment.
   static const String branches = 'branches';

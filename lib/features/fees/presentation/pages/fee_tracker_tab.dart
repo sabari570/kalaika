@@ -9,9 +9,12 @@ import 'package:feemanager/core/widgets/app_text_field.dart';
 import 'package:feemanager/core/widgets/empty_state.dart';
 import 'package:feemanager/core/widgets/month_selector.dart';
 import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
+import 'package:feemanager/features/fees/domain/entities/record_payment_result.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_cubit.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_state.dart';
+import 'package:feemanager/features/fees/presentation/utils/receipt_share_utils.dart';
 import 'package:feemanager/features/fees/presentation/widgets/fee_row_widget.dart';
+import 'package:feemanager/features/fees/presentation/widgets/mark_receipt_sent_dialog.dart';
 import 'package:feemanager/features/fees/presentation/widgets/record_payment_confirm_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -179,7 +182,8 @@ class _FeeTrackerBody extends StatelessWidget {
                         state.selectedMonth,
                       ),
                     ),
-                    onSendTap: () {},
+                    onSendTap: () => unawaited(_shareReceipt(context, row)),
+                    onLongPress: () => unawaited(_voidPayment(context, row)),
                   );
                 },
                 childCount: state.filteredRows.length,
@@ -200,13 +204,13 @@ class _FeeTrackerBody extends StatelessWidget {
     FeeRow row,
     DateTime selectedMonth,
   ) async {
-    final confirmed = await RecordPaymentConfirmDialog.show(
+    final form = await RecordPaymentConfirmDialog.show(
       context,
       studentName: row.student.fullName,
       amount: row.amount,
       month: selectedMonth,
     );
-    if (confirmed != true || !context.mounted) {
+    if (form == null || !context.mounted) {
       return;
     }
     unawaited(
@@ -232,10 +236,104 @@ class _FeeTrackerBody extends StatelessWidget {
         ),
       ),
     );
-    final result = await context.read<FeeTrackerCubit>().recordPayment(row);
+    final cubit = context.read<FeeTrackerCubit>();
+    final result = await cubit.recordPayment(
+      row: row,
+      mode: form.mode,
+      paidOn: form.paidOn,
+    );
     if (context.mounted) {
       Navigator.of(context, rootNavigator: true).pop();
     }
+    if (!context.mounted) {
+      return;
+    }
+    switch (result) {
+      case Success<RecordPaymentResult>(:final value):
+        await ReceiptShareUtils.sharePdf(
+          pdfBytes: value.pdfBytes,
+          receiptNo: value.receiptNo,
+        );
+        if (!context.mounted) {
+          return;
+        }
+        final marked = await MarkReceiptSentDialog.show(context);
+        if (marked == true && context.mounted) {
+          final markResult = await cubit.markReceiptSentForRow(row);
+          if (context.mounted) {
+            switch (markResult) {
+              case Success<void>():
+                break;
+              case Err(:final failure):
+                AppSnackBar.showError(context, failure.message);
+            }
+          }
+        }
+      case Err(:final failure):
+        AppSnackBar.showError(context, failure.message);
+    }
+  }
+
+  Future<void> _shareReceipt(BuildContext context, FeeRow row) async {
+    final cubit = context.read<FeeTrackerCubit>();
+    final pdfResult = await cubit.buildReceiptPdfForRow(row);
+    if (!context.mounted) {
+      return;
+    }
+    switch (pdfResult) {
+      case Success(:final value):
+        final receiptNo = row.payment?.receiptNo ?? 'receipt';
+        await ReceiptShareUtils.sharePdf(
+          pdfBytes: value,
+          receiptNo: receiptNo,
+        );
+        if (!context.mounted) {
+          return;
+        }
+        if (row.displayStatus == FeeRowStatus.pendingSend) {
+          final marked = await MarkReceiptSentDialog.show(context);
+          if (marked == true && context.mounted) {
+            final markResult = await cubit.markReceiptSentForRow(row);
+            if (context.mounted) {
+              switch (markResult) {
+                case Success<void>():
+                  break;
+                case Err(:final failure):
+                  AppSnackBar.showError(context, failure.message);
+              }
+            }
+          }
+        }
+      case Err(:final failure):
+        AppSnackBar.showError(context, failure.message);
+    }
+  }
+
+  Future<void> _voidPayment(BuildContext context, FeeRow row) async {
+    if (row.displayStatus == FeeRowStatus.unpaid) {
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text(AppStrings.voidPayment),
+        content: const Text(AppStrings.voidPaymentConfirm),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(AppStrings.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text(AppStrings.voidPayment),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) {
+      return;
+    }
+    final result = await context.read<FeeTrackerCubit>().voidPaymentForRow(row);
     if (!context.mounted) {
       return;
     }

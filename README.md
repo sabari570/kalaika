@@ -9,7 +9,17 @@ Fee management for dance classes: branches, batches, students, monthly fee track
 - Firebase CLI (`npm install -g firebase-tools`)
 - A Firebase project (`kalaika`) with Google Sign-In configured for Android
 
-## Run the app (production Firebase)
+## Run the app (Spark production)
+
+Production uses **Firebase Authentication + Firestore on the Spark plan**. Receipts are generated on the device and shared with `share_plus`; no Cloud Functions deploy is required.
+
+Deploy security rules when they change:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes
+```
+
+Run the app against your Firebase project:
 
 ```bash
 fvm flutter pub get
@@ -18,9 +28,7 @@ fvm flutter run
 
 Use debug SHA-1/SHA-256 in the Firebase console and keep `android/app/google-services.json` in sync after `flutterfire configure`.
 
-## Firebase emulators (M6 and later)
-
-Cloud Functions and Cloud Storage require the **Blaze** plan in production. During development, use emulators for Firestore, Functions, and Storage. **Authentication stays on the real Firebase project.**
+## Firebase emulators (optional)
 
 ### Quick start (two terminals)
 

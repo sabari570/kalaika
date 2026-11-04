@@ -104,8 +104,9 @@ Rules:
 - Every package must be free and open source (MIT, BSD, Apache-2.0 or similar). Do not use any package that needs a paid licence, a licence key, or has commercial-use restrictions (for example Syncfusion packages are not allowed).
 - No paid third-party APIs or SDKs (no Twilio, no WhatsApp Business provider, no paid PDF, SMS or analytics services). WhatsApp integration is the free `wa.me` link.
 - Fonts: Google Fonts only (free, Open Font License). Icons: Material icons only.
-- Development must not require a billing account. Use the Firebase Emulator Suite (free) for Firestore, Cloud Functions and Cloud Storage while developing (see Section 14). Firebase Authentication with the Google provider is free on the Spark plan and is used directly (not emulated).
-- Production note: Cloud Functions and the Cloud Storage bucket require the Firebase Blaze plan, which needs a billing account to be attached even though usage for one teacher stays within the monthly free quotas. This is the only item that is not available on the Spark plan. Do not deploy functions until the developer decides to enable Blaze; the app must be fully developed and demonstrable against the emulators first. Set `maxInstances` caps on functions and recommend a budget alert in the README.
+- Development may use the Firebase Emulator Suite (optional) for Firestore only, or for comparing receipt PDFs against the reference implementation in `functions/` (see Section 14).
+- **Production (Spark):** Authentication and Firestore only. The app records payments in a client Firestore transaction, generates PDF receipts on device with the Dart `pdf` package, and delivers them through the system share sheet (`share_plus`). No Cloud Functions deploy and no Cloud Storage for receipts is required.
+- The `functions/` folder remains in the repository for optional local emulator experiments and PDF layout reference; the production app does not call receipt callables.
 
 ---
 
@@ -317,30 +318,30 @@ Bottom sheet opened from an unchecked checkbox:
 
 On confirm:
 1. Show a loading state; disable sheet dismissal.
-2. Call the `generateReceipt` callable function (9.1).
-3. On success the row updates through the snapshot listener, and the app proceeds immediately to the WhatsApp step (6.11) using the receipt URL returned.
+2. Run use case `RecordPaymentAndReceipt`: a Firestore transaction increments `meta/counters.receiptSeq`, creates the payment document with `status: "paid"`, empty `receiptPath` / `receiptUrl`, and applies summary deltas on `summaries/{yyyyMM}` in the same transaction.
+3. Build the PDF locally (Section 9.6) and open the system share sheet with the PDF attached (`share_plus`); the teacher selects WhatsApp or another app.
 4. On failure show an error snackbar and keep the row unpaid, with a "Retry" action.
 
-### 6.11 WhatsApp send flow
+### 6.11 WhatsApp and receipt delivery
 
-Limitation to respect: a `wa.me` link opens a chat with a specific number and a pre-filled text but cannot attach a file. The receipt is therefore delivered as a secure download link inside the message.
+**Primary path:** `share_plus` with the PDF file and optional short text. The teacher picks the guardian contact in the system share sheet (WhatsApp is a common choice).
 
-Recipient: the student's WhatsApp number. If it is missing or invalid, the send step is replaced by "A valid WhatsApp number is required" with a shortcut to the student edit screen.
+**Secondary path:** `wa.me` with a text-only message built from the Settings template. Placeholder `{receipt_url}` is omitted or left unchanged on the Spark path because no Storage URL exists.
+
+Recipient: the student's WhatsApp number. If it is missing or invalid, show "A valid WhatsApp number is required" with a shortcut to the student edit screen.
 
 Steps:
-1. Build the message from the template in Settings (default in 6.13), substituting placeholders.
-2. Build the URL: `https://wa.me/<digits>?text=<url-encoded message>` where `<digits>` is the stored international number without a plus sign.
-3. Launch with `url_launcher` using `LaunchMode.externalApplication`.
-4. If launching fails (WhatsApp not installed), show a dialog with "Copy message" and "Share" options and leave the status as pending.
-5. When the app returns to the foreground after launching (a `WidgetsBindingObserver` in the presentation layer), show the dialog: "Was the receipt sent to {recipient name}?" with "Yes, sent" and "Not yet".
-   - "Yes, sent": write the sent status (6.12).
-   - "Not yet": leave the status as pending; the row keeps its "Send" button.
-6. Secondary action "Share PDF" (in the dialog and in the Sent receipt sheet): download the PDF to a temp directory and open the system share sheet with `share_plus`, so the teacher can attach the actual PDF by choosing the contact manually.
+1. After a successful record, share the PDF via `share_plus`.
+2. Optional: launch `https://wa.me/<digits>?text=<url-encoded message>` for a text-only follow-up (`url_launcher`, `LaunchMode.externalApplication`).
+3. When the app returns to the foreground (`WidgetsBindingObserver`), show: "Was the receipt sent to {recipient name}?" with "Yes, mark as sent" and "Not yet".
+   - "Yes, mark as sent": run `MarkReceiptSent` (6.12).
+   - "Not yet": leave status pending; the row keeps its "Send" button (re-share regenerates the PDF from Firestore).
+4. Pending row **Send**: regenerate PDF from payment data and share again.
 
 Android manifest: internet permission, and a `<queries>` block for `https` VIEW intents and the `com.whatsapp` and `com.whatsapp.w4b` packages so that `canLaunchUrl` works on Android 11 and above.
 
 ### 6.12 Marking as sent
-Use case `MarkReceiptSent` performs a Firestore update on the payment document: `status: "sent"`, `sentAt: serverTimestamp()`, `sentVia: "wa_me"`. Security rules (Section 8) allow only this transition from the client. The summary rollup is maintained by a Cloud Function trigger (9.3).
+Use case `MarkReceiptSent` updates the payment document: `status: "sent"`, `sentAt: serverTimestamp()`, `sentVia: "share"` (or `"wa_me"` when only the link path was used). Security rules (Section 8) allow only this transition from the client. Summary `sentCount` deltas are applied in the same client transaction as the status update on the Spark path.
 
 ### 6.13 Settings (Home tab 3)
 - Institute details used on receipts: institute name (default "Kalaika"), tagline (default "By Lakshmi Kumaran"), address lines, phone (default 9074283081), receipt footer note, signatory name
@@ -490,7 +491,7 @@ createdAt: timestamp
 
 The "Receipts pending" list uses a collection group query on `payments` with `ownerId == uid`, `month == selected`, `status == "paid"`. Add the required composite index.
 
-### 7.6 `summaries/{yyyyMM}` (written only by Cloud Functions)
+### 7.6 `summaries/{yyyyMM}` (client merge on Spark path)
 ```
 month: string
 collected: number
@@ -510,12 +511,13 @@ Expected totals and student counts come from the batch and branch documents, so 
 
 ### 8.1 Firestore rules (intent)
 - Everything under `users/{uid}` is readable and writable only when `request.auth.uid == uid`, with these exceptions:
-  - `payments`: clients may read; may not create or delete; may update only to change `status` from `paid` to `sent` together with `sentAt` and `sentVia`, and no other field.
-  - `summaries` and `meta`: clients may read `summaries`; no client writes to either.
+  - `payments`: clients may read; may **create** a payment when field validation passes (`ownerId`, month, amount, mode, `status: paid`, empty receipt URLs, deterministic id); may not delete; may update only for `paid` → `sent` (with `sentAt`, `sentVia`) or to void (`voided`, `status: voided`).
+  - `meta/counters`: clients may read; may create with `receiptSeq: 1` or increment `receiptSeq` by 1 when recording a payment.
+  - `summaries`: clients may read and merge increment updates matching the summary delta shape when recording, marking sent, or voiding payments.
 - Basic validation on branch, batch and student writes (non-empty names, `monthlyFee` and `defaultFee` positive numbers, `whatsappNumber` non-empty).
 
 ### 8.2 Storage rules
-Deny all client reads and writes. Receipts are written by the Cloud Function through the Admin SDK and are reached through the tokenized download URL in the message.
+Deny all client reads and writes. On the Spark production path, receipts are not stored in Cloud Storage; PDFs are generated on device. The optional Cloud Function path (Section 9) may still upload receipts when deployed on Blaze.
 
 ### 8.3 Indexes (`firestore.indexes.json`)
 - Collection group `payments`: `ownerId`, `month`, `status` (all ascending)
@@ -525,11 +527,11 @@ Deny all client reads and writes. Receipts are written by the Cloud Function thr
 
 ---
 
-## 9. Cloud Functions
+## 9. Cloud Functions (optional dev reference)
 
-Location: `functions/` (TypeScript, strict mode). Region `asia-south1`. Use v2 APIs. Structure the code in modules: `callables/`, `triggers/`, `services/` (pdf, storage, counters), `validators/`, `config/`. Use ESLint with the TypeScript recommended rules (free).
+Location: `functions/` (TypeScript, strict mode). **Not deployed for Spark production.** The Flutter app uses the client pipeline in Section 9.6 instead. Keep this code to compare PDF output or run emulators manually.
 
-### 9.1 Callable: `generateReceipt`
+### 9.1 Callable: `generateReceipt` (dev / Blaze deploy only)
 
 Input:
 ```
@@ -560,11 +562,21 @@ If PDF generation or upload fails after the transaction, delete the payment docu
   6. Footer: "Received with thanks", signatory name, footer note, and "This is a computer generated receipt."
 - Format currency with Indian digit grouping (for example 12,500).
 
-### 9.3 Firestore trigger: `onPaymentWritten`
-Triggered on any write to `users/{uid}/branches/{branchId}/batches/{batchId}/payments/{paymentId}`. Compute the difference between the before and after states (paid, sent, voided) and apply `FieldValue.increment` updates to `users/{uid}/summaries/{yyyyMM}` for `collected`, `paidCount`, `sentCount` and the `byBatch.<batchId>` counters, using `set` with `merge: true`. Ignore writes that change nothing relevant so duplicate invocations are harmless.
+### 9.3 Firestore trigger: `onPaymentWritten` (dev / Blaze only)
+Triggered on any write to `users/{uid}/branches/{branchId}/batches/{batchId}/payments/{paymentId}`. On Spark production, the app applies the same deltas in client transactions instead.
 
-### 9.4 Callable: `voidPayment`
+### 9.4 Callable: `voidPayment` (dev / Blaze only)
 Input: `{ branchId, batchId, studentId, month }`. Marks the payment `voided: true` and `status: "voided"`, keeps the receipt number and file for audit, and allows the month to be paid again. The trigger in 9.3 reverses the summary counts. The Fees tab row returns to Unpaid.
+
+### 9.6 Client receipt pipeline (Spark production)
+1. **RecordPaymentAndReceipt:** Firestore transaction — read/increment `meta/counters.receiptSeq`, assign `KLK-{year}-{seq}`, create `payments/{studentId}_{yyyyMM}`, merge summary deltas (`collected`, `paidCount`, `sentCount`, `byBatch`).
+2. **Receipt PDF:** Dart `pdf` package with bundled Noto Sans under `assets/fonts/receipt/`; layout ported from 9.2.
+3. **Delivery:** `share_plus` with PDF bytes written to a temp file.
+4. **MarkReceiptSent:** client update `paid` → `sent` plus summary `sentCount` delta.
+5. **Void:** client update to `voided` with reversing summary deltas; long-press on fee row.
+6. **Open receipt (student history):** regenerate PDF from payment snapshot and institute settings; no Storage URL.
+
+Idempotency: if the payment document exists and is not voided, return the existing `receiptNo` and regenerate PDF without bumping the counter.
 
 ### 9.5 Operational notes
 - Set `maxInstances` to a small value (for example 5).
@@ -701,11 +713,11 @@ Provide a "Download sample template" button that generates a sample `.xlsx` with
 3. Run `flutterfire configure` to generate `firebase_options.dart` and register the Android app `com.kalaika.feemanager`.
 4. Add the debug SHA-1 and SHA-256 fingerprints to the Firebase Android app (required for Google sign-in) and refresh `google-services.json`.
 5. Initialize functions with `firebase init functions` (TypeScript) and Firebase emulators for Firestore, Functions and Storage. Add `pdf-lib` and `@pdf-lib/fontkit`.
-6. Development against the emulators: add a `--dart-define=USE_EMULATORS=true` flag and a `--dart-define=EMULATOR_HOST=<host>` flag (use `10.0.2.2` for the Android emulator, or the computer's LAN address for a physical device). When enabled, point Firestore, Cloud Functions and Cloud Storage to the emulators at startup. Firebase Authentication stays on the real service. Document the commands in the README.
-7. Emulator limitation to document: receipt URLs generated while using the Storage emulator point to the local machine, so they cannot be opened from the recipient's phone. The full WhatsApp link experience can only be verified after production deployment, which needs the Blaze plan (see Section 3).
-8. Add `firestore.rules`, `storage.rules` and `firestore.indexes.json` as in Section 8. Deploy rules and indexes to the Spark project when ready; deploy functions and storage only after Blaze is enabled.
+6. Development (optional): Firestore emulator with `--dart-define=USE_EMULATORS=true` and `--dart-define=EMULATOR_HOST=<host>`. Functions and Storage emulators are optional for comparing server PDFs; they are not required for fee tracking on Spark.
+7. Deploy rules and indexes to the Spark project: `firebase deploy --only firestore:rules,firestore:indexes`. Functions and Storage deploy remain optional (Blaze).
+8. Add `firestore.rules`, `storage.rules` and `firestore.indexes.json` as in Section 8.
 9. Add the Android manifest `<queries>` entries from 6.11.
-10. Provide a `README.md` with setup steps, emulator commands, architecture overview and how to run the app.
+10. Provide a `README.md` with Spark production run steps, optional emulator commands, architecture overview and how to run the app.
 
 ---
 
@@ -733,13 +745,13 @@ Acceptance: importing a 100-row sample creates exactly the valid students and up
 Fees tab with the month selector, search, filters, the three row states, and live updates from the two listeners. Include a temporary debug-only way to create a payment document so the states can be verified before functions exist.
 Acceptance: changing the month swaps only the payments subscription; states render correctly.
 
-**M6 - Cloud Functions and receipts**
-`generateReceipt`, PDF generation with embedded Google Fonts (verify the rupee symbol renders), receipt counter, storage upload, `onPaymentWritten`, `voidPayment`, rules, indexes, emulator configuration.
-Acceptance: calling the function against the emulators produces a correct PDF and a payment document; calling it twice returns the same receipt.
+**M6 - Receipts (client on Spark; optional server reference)**
+Client `RecordPaymentAndReceipt` transaction, summary deltas, PDF generation with bundled Noto fonts (verify the rupee symbol renders), Firestore rules for payment create and summary merge. Optional: run `functions/` emulators to compare PDF layout.
+Acceptance: on a Spark project without emulators, record a payment, share a PDF, see the payment in Firestore; repeat the same month returns the same receipt number.
 
-**M7 - Payment and WhatsApp flow**
-Payment confirmation sheet, callable integration, wa.me launch, lifecycle confirmation dialog, sent update, Share PDF fallback, void action, receipt detail sheet. Remove the debug-only payment creator.
-Acceptance: on a device with the emulators running, check a box, confirm, WhatsApp opens on the correct chat with the formal message, confirm "Yes, sent", and the row turns green immediately.
+**M7 - Payment and delivery flow**
+Payment confirmation sheet (mode and paid date), share sheet as primary delivery, mark-sent dialog, pending resend, void on long-press, student history open via regenerated PDF.
+Acceptance: confirm payment, share PDF, mark sent, fee row shows sent; void returns the row to unpaid.
 
 **M8 - Dashboard and settings**
 Dashboard tiles, progress, branch and batch cards, "Receipts pending" list, Settings (institute details, template editor with preview, account, sign-out), empty and error states, motion polish.

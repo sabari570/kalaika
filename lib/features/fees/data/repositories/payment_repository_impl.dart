@@ -1,22 +1,24 @@
+import 'dart:typed_data';
+
 import 'package:feemanager/core/error/exception_mapper.dart';
 import 'package:feemanager/core/error/result.dart';
-import 'package:feemanager/features/fees/data/datasources/payment_functions_datasource.dart';
 import 'package:feemanager/features/fees/data/datasources/payment_remote_datasource.dart';
-import 'package:feemanager/features/fees/domain/entities/generate_receipt_result.dart';
+import 'package:feemanager/features/fees/data/datasources/payment_write_datasource.dart';
 import 'package:feemanager/features/fees/domain/entities/payment.dart';
+import 'package:feemanager/features/fees/domain/entities/record_payment_result.dart';
 import 'package:feemanager/features/fees/domain/repositories/payment_repository.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
 
-/// Firestore and Cloud Functions implementation of [PaymentRepository].
+/// Firestore implementation of [PaymentRepository].
 class PaymentRepositoryImpl implements PaymentRepository {
   /// Creates the repository.
   PaymentRepositoryImpl({
     required this.remoteDataSource,
-    required this.functionsDataSource,
+    required this.writeDataSource,
   });
 
   final PaymentRemoteDataSource remoteDataSource;
-  final PaymentFunctionsDataSource functionsDataSource;
+  final PaymentWriteDataSource writeDataSource;
 
   @override
   Stream<List<Student>> watchActiveStudents(
@@ -40,7 +42,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
-  Future<Result<GenerateReceiptResult>> generateReceipt({
+  Future<Result<RecordPaymentResult>> recordPaymentAndReceipt({
     required String branchId,
     required String batchId,
     required Student student,
@@ -51,21 +53,77 @@ class PaymentRepositoryImpl implements PaymentRepository {
     String? note,
   }) async {
     try {
-      final result = await functionsDataSource.generateReceipt(
+      final result = await writeDataSource.recordPaymentAndReceipt(
         branchId: branchId,
         batchId: batchId,
-        studentId: student.id,
+        student: student,
         monthKey: monthKey,
         amount: amount,
         mode: mode,
         paidOn: paidOn,
         note: note,
       );
-      return Success<GenerateReceiptResult>(result);
+      return Success<RecordPaymentResult>(result);
     } on Object catch (error, stackTrace) {
-      return Err<GenerateReceiptResult>(
+      return Err<RecordPaymentResult>(
         ExceptionMapper.map(error, stackTrace),
       );
+    }
+  }
+
+  @override
+  Future<Result<Uint8List>> buildReceiptPdf({
+    required String branchId,
+    required String batchId,
+    required String paymentId,
+    required Student student,
+  }) async {
+    try {
+      final bytes = await writeDataSource.buildReceiptPdf(
+        branchId: branchId,
+        batchId: batchId,
+        paymentId: paymentId,
+        student: student,
+      );
+      return Success<Uint8List>(bytes);
+    } on Object catch (error, stackTrace) {
+      return Err<Uint8List>(ExceptionMapper.map(error, stackTrace));
+    }
+  }
+
+  @override
+  Future<Result<void>> markReceiptSent({
+    required String branchId,
+    required String batchId,
+    required String paymentId,
+  }) async {
+    try {
+      await writeDataSource.markReceiptSent(
+        branchId: branchId,
+        batchId: batchId,
+        paymentId: paymentId,
+      );
+      return const Success<void>(null);
+    } on Object catch (error, stackTrace) {
+      return Err<void>(ExceptionMapper.map(error, stackTrace));
+    }
+  }
+
+  @override
+  Future<Result<void>> voidPayment({
+    required String branchId,
+    required String batchId,
+    required String paymentId,
+  }) async {
+    try {
+      await writeDataSource.voidPayment(
+        branchId: branchId,
+        batchId: batchId,
+        paymentId: paymentId,
+      );
+      return const Success<void>(null);
+    } on Object catch (error, stackTrace) {
+      return Err<void>(ExceptionMapper.map(error, stackTrace));
     }
   }
 }

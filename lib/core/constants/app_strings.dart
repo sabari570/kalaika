@@ -100,6 +100,17 @@ abstract final class AppStrings {
   static const String confirmAndGenerateReceipt =
       'Confirm and generate receipt';
   static const String generatingReceipt = 'Generating receipt';
+  static const String paymentMode = 'Payment mode';
+  static const String paidOnDate = 'Paid on';
+  static const String markReceiptSentTitle = 'Receipt delivery';
+  static const String markReceiptSentMessage =
+      'Was the receipt sent to the guardian?';
+  static const String markReceiptSentYes = 'Yes, mark as sent';
+  static const String markReceiptSentNo = 'Not yet';
+  static const String voidPayment = 'Void payment';
+  static const String voidPaymentConfirm =
+      'Void this payment? The fee row will return to unpaid.';
+  static const String feeReceiptShareSubject = 'Fee receipt';
   static const String confirmPayment = 'Confirm payment';
   static const String statusSentOn = 'Sent on {date}';
   static const String addStudent = 'Add student';

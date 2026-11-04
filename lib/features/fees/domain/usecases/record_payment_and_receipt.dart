@@ -1,20 +1,20 @@
 import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/usecase/usecase.dart';
-import 'package:feemanager/features/fees/domain/entities/generate_receipt_result.dart';
+import 'package:feemanager/features/fees/domain/entities/record_payment_result.dart';
 import 'package:feemanager/features/fees/domain/repositories/payment_repository.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
 
-/// Records a payment and generates a PDF receipt on the server.
-class GenerateReceipt
-    implements UseCase<GenerateReceiptResult, GenerateReceiptParams> {
+/// Records a payment in Firestore and builds the receipt PDF on device.
+class RecordPaymentAndReceipt
+    implements UseCase<RecordPaymentResult, RecordPaymentParams> {
   /// Creates the use case.
-  GenerateReceipt(this._repository);
+  RecordPaymentAndReceipt(this._repository);
 
   final PaymentRepository _repository;
 
   @override
-  Future<Result<GenerateReceiptResult>> call(GenerateReceiptParams params) {
-    return _repository.generateReceipt(
+  Future<Result<RecordPaymentResult>> call(RecordPaymentParams params) {
+    return _repository.recordPaymentAndReceipt(
       branchId: params.branchId,
       batchId: params.batchId,
       student: params.student,
@@ -27,10 +27,10 @@ class GenerateReceipt
   }
 }
 
-/// Parameters for [GenerateReceipt].
-class GenerateReceiptParams {
-  /// Creates generate-receipt parameters.
-  const GenerateReceiptParams({
+/// Parameters for recording a payment and receipt.
+class RecordPaymentParams {
+  /// Creates parameters.
+  const RecordPaymentParams({
     required this.branchId,
     required this.batchId,
     required this.student,

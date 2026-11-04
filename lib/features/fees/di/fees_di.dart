@@ -1,9 +1,10 @@
 import 'package:feemanager/core/di/service_locator.dart';
-import 'package:feemanager/features/fees/data/datasources/payment_functions_datasource.dart';
 import 'package:feemanager/features/fees/data/datasources/payment_remote_datasource.dart';
+import 'package:feemanager/features/fees/data/datasources/payment_write_datasource.dart';
 import 'package:feemanager/features/fees/data/repositories/payment_repository_impl.dart';
 import 'package:feemanager/features/fees/domain/repositories/payment_repository.dart';
-import 'package:feemanager/features/fees/domain/usecases/generate_receipt.dart';
+import 'package:feemanager/features/fees/domain/usecases/payment_receipt_actions.dart';
+import 'package:feemanager/features/fees/domain/usecases/record_payment_and_receipt.dart';
 import 'package:feemanager/features/fees/domain/usecases/watch_monthly_fees.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_cubit.dart';
 
@@ -11,11 +12,11 @@ import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_cubit.da
 void configureFeesDependencies() {
   sl
     ..registerLazySingleton(PaymentRemoteDataSource.new)
-    ..registerLazySingleton(PaymentFunctionsDataSource.new)
+    ..registerLazySingleton(PaymentWriteDataSource.new)
     ..registerLazySingleton<PaymentRepository>(
       () => PaymentRepositoryImpl(
         remoteDataSource: sl<PaymentRemoteDataSource>(),
-        functionsDataSource: sl<PaymentFunctionsDataSource>(),
+        writeDataSource: sl<PaymentWriteDataSource>(),
       ),
     )
     ..registerLazySingleton(
@@ -25,13 +26,25 @@ void configureFeesDependencies() {
       () => WatchMonthlyPayments(sl<PaymentRepository>()),
     )
     ..registerLazySingleton(
-      () => GenerateReceipt(sl<PaymentRepository>()),
+      () => RecordPaymentAndReceipt(sl<PaymentRepository>()),
+    )
+    ..registerLazySingleton(
+      () => MarkReceiptSent(sl<PaymentRepository>()),
+    )
+    ..registerLazySingleton(
+      () => BuildReceiptPdf(sl<PaymentRepository>()),
+    )
+    ..registerLazySingleton(
+      () => VoidPayment(sl<PaymentRepository>()),
     )
     ..registerFactory(
       () => FeeTrackerCubit(
         watchActiveStudents: sl<WatchActiveStudentsForFees>(),
         watchMonthlyPayments: sl<WatchMonthlyPayments>(),
-        generateReceipt: sl<GenerateReceipt>(),
+        recordPaymentAndReceipt: sl<RecordPaymentAndReceipt>(),
+        markReceiptSent: sl<MarkReceiptSent>(),
+        buildReceiptPdf: sl<BuildReceiptPdf>(),
+        voidPayment: sl<VoidPayment>(),
       ),
     );
 }

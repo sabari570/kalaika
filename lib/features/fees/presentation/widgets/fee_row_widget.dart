@@ -3,7 +3,6 @@ import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
 import 'package:feemanager/core/widgets/status_chip.dart';
 import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -14,6 +13,7 @@ class FeeRowWidget extends StatelessWidget {
     required this.row,
     required this.onUnpaidTap,
     required this.onSendTap,
+    this.onLongPress,
     super.key,
   });
 
@@ -26,6 +26,9 @@ class FeeRowWidget extends StatelessWidget {
   /// Invoked when send is pressed on a pending row (M7).
   final VoidCallback onSendTap;
 
+  /// Invoked on long-press to void a recorded payment.
+  final VoidCallback? onLongPress;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context).textTheme;
@@ -34,35 +37,38 @@ class FeeRowWidget extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Row(
-        children: <Widget>[
-          _StatusControl(
-            status: row.displayStatus,
-            sentAt: row.payment?.sentAt,
-            onUnpaidTap: onUnpaidTap,
-            onSendTap: onSendTap,
-          ),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(row.student.fullName, style: theme.titleSmall),
-                if (guardian.isNotEmpty)
-                  Text(
-                    guardian,
-                    style: theme.bodySmall?.copyWith(
-                      color: colors.creamMuted,
-                    ),
-                  ),
-              ],
+      child: GestureDetector(
+        onLongPress: onLongPress,
+        child: Row(
+          children: <Widget>[
+            _StatusControl(
+              status: row.displayStatus,
+              sentAt: row.payment?.sentAt,
+              onUnpaidTap: onUnpaidTap,
+              onSendTap: onSendTap,
             ),
-          ),
-          Text(
-            'Rs. ${row.amount}',
-            style: theme.titleSmall,
-          ),
-        ],
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(row.student.fullName, style: theme.titleSmall),
+                  if (guardian.isNotEmpty)
+                    Text(
+                      guardian,
+                      style: theme.bodySmall?.copyWith(
+                        color: colors.creamMuted,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Text(
+              'Rs. ${row.amount}',
+              style: theme.titleSmall,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -87,12 +93,12 @@ class _StatusControl extends StatelessWidget {
     return switch (status) {
       FeeRowStatus.unpaid => Semantics(
         label: AppStrings.statusUnpaid,
-        button: kDebugMode,
+        button: true,
         child: SizedBox(
           width: 48,
           height: 48,
           child: IconButton(
-            onPressed: kDebugMode ? onUnpaidTap : null,
+            onPressed: onUnpaidTap,
             icon: Icon(
               Icons.check_box_outline_blank,
               color: colors.copper,

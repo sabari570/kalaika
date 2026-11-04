@@ -13,26 +13,80 @@ service cloud.firestore {
       return value is int && value > 0;
     }
 
+    function isValidMonth(value) {
+      return value is string
+        && value.matches('^\\d{4}-(0[1-9]|1[0-2])$');
+    }
+
+    function isValidPaymentMode(value) {
+      return value in ['cash', 'upi', 'bank', 'other'];
+    }
+
     function paymentSentTransitionOnly() {
       return request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['status', 'sentAt', 'sentVia'])
         && resource.data.status == 'paid'
         && request.resource.data.status == 'sent'
-        && request.resource.data.sentVia == 'wa_me'
+        && request.resource.data.sentVia in ['wa_me', 'share']
         && request.resource.data.sentAt is timestamp;
+    }
+
+    function paymentVoidTransitionOnly() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['voided', 'status'])
+        && resource.data.voided == false
+        && request.resource.data.voided == true
+        && request.resource.data.status == 'voided';
+    }
+
+    function paymentCreateValid(uid) {
+      let data = request.resource.data;
+      return data.ownerId == uid
+        && data.branchId is string
+        && data.batchId is string
+        && data.studentId is string
+        && isNonEmptyString(data.studentName)
+        && isNonEmptyString(data.whatsappNumber)
+        && isValidMonth(data.month)
+        && isPositiveInt(data.amount)
+        && isPositiveInt(data.batchFee)
+        && isValidPaymentMode(data.mode)
+        && data.paidOn is timestamp
+        && data.status == 'paid'
+        && data.voided == false
+        && isNonEmptyString(data.receiptNo)
+        && data.receiptPath == ''
+        && data.receiptUrl == ''
+        && data.sentAt == null
+        && data.sentVia == null
+        && data.createdAt is timestamp;
+    }
+
+    function counterIncrementValid() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['receiptSeq'])
+        && request.resource.data.receiptSeq == resource.data.receiptSeq + 1;
+    }
+
+    function counterCreateValid() {
+      return request.resource.data.keys().hasOnly(['receiptSeq'])
+        && request.resource.data.receiptSeq == 1;
     }
 
     match /users/{uid} {
       allow read, write: if isOwner(uid);
 
-      match /meta/{document=**} {
+      match /meta/counters {
         allow read: if isOwner(uid);
-        allow write: if false;
+        allow create: if isOwner(uid) && counterCreateValid();
+        allow update: if isOwner(uid) && counterIncrementValid();
+        allow delete: if false;
       }
 
       match /summaries/{monthId} {
         allow read: if isOwner(uid);
-        allow write: if false;
+        allow create, update: if isOwner(uid);
+        allow delete: if false;
       }
 
       match /branches/{branchId} {
@@ -59,8 +113,10 @@ service cloud.firestore {
 
           match /payments/{paymentId} {
             allow read: if isOwner(uid);
-            allow create, delete: if false;
-            allow update: if isOwner(uid) && paymentSentTransitionOnly();
+            allow create: if isOwner(uid) && paymentCreateValid(uid);
+            allow delete: if false;
+            allow update: if isOwner(uid)
+              && (paymentSentTransitionOnly() || paymentVoidTransitionOnly());
           }
         }
       }

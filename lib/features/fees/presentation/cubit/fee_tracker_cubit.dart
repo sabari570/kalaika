@@ -1,16 +1,18 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/constants/firestore_keys.dart';
-import 'package:feemanager/core/constants/payment_constants.dart';
 import 'package:feemanager/core/error/failure.dart';
 import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/session/fee_month_session.dart';
 import 'package:feemanager/core/utils/month_key_utils.dart';
+import 'package:feemanager/core/utils/payment_document_id.dart';
 import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
-import 'package:feemanager/features/fees/domain/entities/generate_receipt_result.dart';
 import 'package:feemanager/features/fees/domain/entities/payment.dart';
-import 'package:feemanager/features/fees/domain/usecases/generate_receipt.dart';
+import 'package:feemanager/features/fees/domain/entities/record_payment_result.dart';
+import 'package:feemanager/features/fees/domain/usecases/payment_receipt_actions.dart';
+import 'package:feemanager/features/fees/domain/usecases/record_payment_and_receipt.dart';
 import 'package:feemanager/features/fees/domain/usecases/watch_monthly_fees.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_state.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
@@ -22,12 +24,18 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
   FeeTrackerCubit({
     required this._watchActiveStudents,
     required this._watchMonthlyPayments,
-    required this._generateReceipt,
+    required this._recordPaymentAndReceipt,
+    required this._markReceiptSent,
+    required this._buildReceiptPdf,
+    required this._voidPayment,
   }) : super(const FeeTrackerLoading());
 
   final WatchActiveStudentsForFees _watchActiveStudents;
   final WatchMonthlyPayments _watchMonthlyPayments;
-  final GenerateReceipt _generateReceipt;
+  final RecordPaymentAndReceipt _recordPaymentAndReceipt;
+  final MarkReceiptSent _markReceiptSent;
+  final BuildReceiptPdf _buildReceiptPdf;
+  final VoidPayment _voidPayment;
 
   StreamSubscription<List<Student>>? _studentsSubscription;
   StreamSubscription<List<Payment>>? _paymentsSubscription;
@@ -107,41 +115,110 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
     _emitCombined();
   }
 
-  /// Records payment and generates a receipt via Cloud Functions.
-  Future<Result<void>> recordPayment(FeeRow row) async {
+  /// Records payment, updates Firestore, and returns PDF bytes.
+  Future<Result<RecordPaymentResult>> recordPayment({
+    required FeeRow row,
+    required String mode,
+    required DateTime paidOn,
+    String? note,
+  }) async {
     if (_recordingPayment) {
-      return const Success<void>(null);
+      return const Err<RecordPaymentResult>(
+        ValidationFailure(AppStrings.unknownError),
+      );
     }
     final branchId = _branchId;
     final batchId = _batchId;
     if (branchId == null || batchId == null) {
-      return const Err<void>(ValidationFailure(AppStrings.unknownError));
+      return const Err<RecordPaymentResult>(
+        ValidationFailure(AppStrings.unknownError),
+      );
     }
     if (row.displayStatus != FeeRowStatus.unpaid) {
-      return const Success<void>(null);
+      return const Err<RecordPaymentResult>(
+        ValidationFailure(AppStrings.unknownError),
+      );
     }
     _recordingPayment = true;
     try {
       final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
-      final paidOn = DateTime.now();
-      final result = await _generateReceipt(
-        GenerateReceiptParams(
+      return await _recordPaymentAndReceipt(
+        RecordPaymentParams(
           branchId: branchId,
           batchId: batchId,
           student: row.student,
           monthKey: monthKey,
           amount: row.amount,
-          mode: PaymentConstants.modeCash,
+          mode: mode,
           paidOn: paidOn,
+          note: note,
         ),
       );
-      return switch (result) {
-        Success<GenerateReceiptResult>() => const Success<void>(null),
-        Err<GenerateReceiptResult>(:final failure) => Err<void>(failure),
-      };
     } finally {
       _recordingPayment = false;
     }
+  }
+
+  /// Builds PDF bytes for a pending or sent row.
+  Future<Result<Uint8List>> buildReceiptPdfForRow(FeeRow row) async {
+    final branchId = _branchId;
+    final batchId = _batchId;
+    if (branchId == null || batchId == null) {
+      return const Err<Uint8List>(ValidationFailure(AppStrings.unknownError));
+    }
+    final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
+    final paymentId = row.payment?.id ??
+        PaymentDocumentId.fromStudentAndMonth(row.student.id, monthKey);
+    return _buildReceiptPdf(
+      BuildReceiptPdfParams(
+        branchId: branchId,
+        batchId: batchId,
+        paymentId: paymentId,
+        student: row.student,
+      ),
+    );
+  }
+
+  /// Marks the row payment as sent after sharing.
+  Future<Result<void>> markReceiptSentForRow(FeeRow row) async {
+    final branchId = _branchId;
+    final batchId = _batchId;
+    if (branchId == null || batchId == null) {
+      return const Err<void>(ValidationFailure(AppStrings.unknownError));
+    }
+    final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
+    final paymentId = PaymentDocumentId.fromStudentAndMonth(
+      row.student.id,
+      monthKey,
+    );
+    return _markReceiptSent(
+      MarkReceiptSentParams(
+        branchId: branchId,
+        batchId: batchId,
+        paymentId: paymentId,
+      ),
+    );
+  }
+
+  /// Voids a recorded payment for the selected month.
+  Future<Result<void>> voidPaymentForRow(FeeRow row) async {
+    final branchId = _branchId;
+    final batchId = _batchId;
+    if (branchId == null || batchId == null) {
+      return const Err<void>(ValidationFailure(AppStrings.unknownError));
+    }
+    final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
+    final paymentId = PaymentDocumentId.fromStudentAndMonth(
+      row.student.id,
+      monthKey,
+    );
+    return _voidPayment(
+      VoidPaymentParams(
+        branchId: branchId,
+        batchId: batchId,
+        paymentId: paymentId,
+      ),
+    );
   }
 
   void _listenPayments() {

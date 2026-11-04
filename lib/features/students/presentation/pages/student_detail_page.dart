@@ -4,13 +4,16 @@ import 'package:feemanager/core/constants/app_routes.dart';
 import 'package:feemanager/core/constants/app_spacing.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/constants/firestore_keys.dart';
-import 'package:feemanager/core/firebase/receipt_download_url.dart';
+import 'package:feemanager/core/di/service_locator.dart';
+import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
 import 'package:feemanager/core/utils/age_utils.dart';
 import 'package:feemanager/core/utils/phone_utils.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/kalaika_card.dart';
 import 'package:feemanager/core/widgets/status_chip.dart';
+import 'package:feemanager/features/fees/domain/usecases/payment_receipt_actions.dart';
+import 'package:feemanager/features/fees/presentation/utils/receipt_share_utils.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
 import 'package:feemanager/features/students/domain/entities/student_payment_summary.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_detail_cubit.dart';
@@ -180,8 +183,9 @@ class _StudentDetailBody extends StatelessWidget {
                         Text('Receipt ${payment.receiptNo}'),
                       const SizedBox(height: AppSpacing.sm),
                       StatusChip(status: _statusFor(payment.status)),
-                      if (payment.receiptUrl != null ||
-                          payment.receiptPath != null) ...<Widget>[
+                      if (payment.receiptNo != null &&
+                          payment.status !=
+                              FirestoreKeys.statusVoided) ...<Widget>[
                         const SizedBox(height: AppSpacing.sm),
                         TextButton(
                           onPressed: () => unawaited(
@@ -212,25 +216,27 @@ class _StudentDetailBody extends StatelessWidget {
     BuildContext context,
     StudentPaymentSummary payment,
   ) async {
-    final url = await ReceiptDownloadUrl.resolveForOpen(
-      receiptUrl: payment.receiptUrl,
-      receiptPath: payment.receiptPath,
+    final buildPdf = sl<BuildReceiptPdf>();
+    final result = await buildPdf(
+      BuildReceiptPdfParams(
+        branchId: branchId,
+        batchId: batchId,
+        paymentId: payment.id,
+        student: student,
+      ),
     );
     if (!context.mounted) {
       return;
     }
-    if (url == null) {
-      AppSnackBar.showError(context, AppStrings.receiptOpenFailed);
-      return;
+    switch (result) {
+      case Success(:final value):
+        await ReceiptShareUtils.sharePdf(
+          pdfBytes: value,
+          receiptNo: payment.receiptNo ?? payment.id,
+        );
+      case Err(:final failure):
+        AppSnackBar.showError(context, failure.message);
     }
-    final uri = Uri.parse(url);
-    if (!await canLaunchUrl(uri)) {
-      if (context.mounted) {
-        AppSnackBar.showError(context, AppStrings.receiptOpenFailed);
-      }
-      return;
-    }
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
 

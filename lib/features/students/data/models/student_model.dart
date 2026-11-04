@@ -157,6 +157,7 @@ class StudentPaymentModel {
     required this.receiptNo,
     required this.status,
     required this.receiptUrl,
+    required this.receiptPath,
   });
   /// Builds from a snapshot.
   factory StudentPaymentModel.fromSnapshot(
@@ -171,6 +172,7 @@ class StudentPaymentModel {
       receiptNo: data[FirestoreKeys.receiptNo] as String?,
       status: data[FirestoreKeys.status] as String? ?? '',
       receiptUrl: data[FirestoreKeys.receiptUrl] as String?,
+      receiptPath: data[FirestoreKeys.receiptPath] as String?,
     );
   }
 
@@ -195,6 +197,9 @@ class StudentPaymentModel {
   /// Receipt URL.
   final String? receiptUrl;
 
+  /// Storage path for the PDF.
+  final String? receiptPath;
+
   /// Converts to domain summary.
   StudentPaymentSummary toEntity() {
     return StudentPaymentSummary(
@@ -205,6 +210,7 @@ class StudentPaymentModel {
       receiptNo: receiptNo,
       status: status,
       receiptUrl: receiptUrl,
+      receiptPath: receiptPath,
     );
   }
 }

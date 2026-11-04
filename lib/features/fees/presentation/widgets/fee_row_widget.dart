@@ -20,7 +20,7 @@ class FeeRowWidget extends StatelessWidget {
   /// Row view model.
   final FeeRow row;
 
-  /// Invoked when the unpaid control is activated (debug payment in M5).
+  /// Invoked when the unpaid control is activated to record payment.
   final VoidCallback onUnpaidTap;
 
   /// Invoked when send is pressed on a pending row (M7).

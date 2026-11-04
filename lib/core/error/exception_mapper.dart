@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/error/failure.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,6 +10,12 @@ abstract final class ExceptionMapper {
   static Failure map(Object error, [StackTrace? stackTrace]) {
     if (error is FirebaseAuthException) {
       return AuthFailure(_authMessage(error));
+    }
+    if (error is FirebaseFunctionsException) {
+      return _functionsFailure(error);
+    }
+    if (error is FormatException) {
+      return const ServerFailure(AppStrings.receiptGenerateFailed);
     }
     if (error is FirebaseException) {
       return const UnknownFailure(AppStrings.firebaseInitFailed);
@@ -30,6 +37,23 @@ abstract final class ExceptionMapper {
     return switch (error.code) {
       'network-request-failed' => AppStrings.networkError,
       _ => AppStrings.signInFailed,
+    };
+  }
+
+  static Failure _functionsFailure(FirebaseFunctionsException error) {
+    return switch (error.code) {
+      'unauthenticated' => const AuthFailure(AppStrings.signInFailed),
+      'permission-denied' => const PermissionFailure(AppStrings.unknownError),
+      'not-found' => const NotFoundFailure(AppStrings.unknownError),
+      'invalid-argument' => ValidationFailure(
+        error.message ?? AppStrings.unknownError,
+      ),
+      'failed-precondition' => ValidationFailure(
+        error.message ?? AppStrings.unknownError,
+      ),
+      'unavailable' => const NetworkFailure(AppStrings.networkError),
+      'internal' => const ServerFailure(AppStrings.receiptGenerateFailed),
+      _ => const ServerFailure(AppStrings.receiptGenerateFailed),
     };
   }
 }

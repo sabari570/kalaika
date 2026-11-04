@@ -11,6 +11,7 @@ class StudentPaymentSummary extends Equatable {
     required this.receiptNo,
     required this.status,
     required this.receiptUrl,
+    required this.receiptPath,
   });
 
   /// Payment document id.
@@ -34,6 +35,9 @@ class StudentPaymentSummary extends Equatable {
   /// Receipt download URL if available.
   final String? receiptUrl;
 
+  /// Cloud Storage path for the PDF.
+  final String? receiptPath;
+
   @override
   List<Object?> get props => <Object?>[
     id,
@@ -43,5 +47,6 @@ class StudentPaymentSummary extends Equatable {
     receiptNo,
     status,
     receiptUrl,
+    receiptPath,
   ];
 }

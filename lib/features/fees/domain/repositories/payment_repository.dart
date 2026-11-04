@@ -1,8 +1,9 @@
 import 'package:feemanager/core/error/result.dart';
+import 'package:feemanager/features/fees/domain/entities/generate_receipt_result.dart';
 import 'package:feemanager/features/fees/domain/entities/payment.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
 
-/// Payment reads and debug writes for the fee tracker.
+/// Payment reads and receipt generation for the fee tracker.
 abstract class PaymentRepository {
   /// Streams active students in a batch ordered by name.
   Stream<List<Student>> watchActiveStudents(
@@ -17,12 +18,15 @@ abstract class PaymentRepository {
     String monthKey,
   );
 
-  /// Creates a paid payment document for debugging (M5 only).
-  Future<Result<void>> debugCreatePaidPayment({
+  /// Creates a paid payment and PDF receipt via Cloud Functions.
+  Future<Result<GenerateReceiptResult>> generateReceipt({
     required String branchId,
     required String batchId,
     required Student student,
     required String monthKey,
-    required int batchDefaultFee,
+    required int amount,
+    required String mode,
+    required DateTime paidOn,
+    String? note,
   });
 }

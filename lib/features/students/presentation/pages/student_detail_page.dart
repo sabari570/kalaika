@@ -4,9 +4,11 @@ import 'package:feemanager/core/constants/app_routes.dart';
 import 'package:feemanager/core/constants/app_spacing.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/constants/firestore_keys.dart';
+import 'package:feemanager/core/firebase/receipt_download_url.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
 import 'package:feemanager/core/utils/age_utils.dart';
 import 'package:feemanager/core/utils/phone_utils.dart';
+import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/kalaika_card.dart';
 import 'package:feemanager/core/widgets/status_chip.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
@@ -178,11 +180,12 @@ class _StudentDetailBody extends StatelessWidget {
                         Text('Receipt ${payment.receiptNo}'),
                       const SizedBox(height: AppSpacing.sm),
                       StatusChip(status: _statusFor(payment.status)),
-                      if (payment.receiptUrl != null) ...<Widget>[
+                      if (payment.receiptUrl != null ||
+                          payment.receiptPath != null) ...<Widget>[
                         const SizedBox(height: AppSpacing.sm),
                         TextButton(
                           onPressed: () => unawaited(
-                            _openUrl(payment.receiptUrl!),
+                            _openReceipt(context, payment),
                           ),
                           child: const Text(AppStrings.openReceipt),
                         ),
@@ -205,11 +208,29 @@ class _StudentDetailBody extends StatelessWidget {
     };
   }
 
-  Future<void> _openUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _openReceipt(
+    BuildContext context,
+    StudentPaymentSummary payment,
+  ) async {
+    final url = await ReceiptDownloadUrl.resolveForOpen(
+      receiptUrl: payment.receiptUrl,
+      receiptPath: payment.receiptPath,
+    );
+    if (!context.mounted) {
+      return;
     }
+    if (url == null) {
+      AppSnackBar.showError(context, AppStrings.receiptOpenFailed);
+      return;
+    }
+    final uri = Uri.parse(url);
+    if (!await canLaunchUrl(uri)) {
+      if (context.mounted) {
+        AppSnackBar.showError(context, AppStrings.receiptOpenFailed);
+      }
+      return;
+    }
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
 

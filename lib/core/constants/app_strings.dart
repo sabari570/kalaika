@@ -95,11 +95,12 @@ abstract final class AppStrings {
   static const String recordPaymentAmountLine = 'Amount: Rs. {amount}';
   static const String recordPaymentMonthLine = 'Month: {month}';
   static const String recordPaymentIrreversible =
-      'This action is irreversible. Once confirmed, a payment record '
+      'This action is irreversible. A payment record and PDF receipt '
       'will be created for this month.';
+  static const String confirmAndGenerateReceipt =
+      'Confirm and generate receipt';
+  static const String generatingReceipt = 'Generating receipt';
   static const String confirmPayment = 'Confirm payment';
-  static const String debugCreatePayment =
-      'Tap an unpaid checkbox to record a debug payment for testing.';
   static const String statusSentOn = 'Sent on {date}';
   static const String addStudent = 'Add student';
   static const String importFromExcel = 'Import from Excel';
@@ -134,6 +135,8 @@ abstract final class AppStrings {
   static const String paymentHistory = 'Payment history';
   static const String noPaymentHistory = 'No payments have been recorded.';
   static const String openReceipt = 'Open receipt';
+  static const String receiptOpenFailed =
+      'The receipt could not be opened. Please try again.';
   static const String importStudentsTitle = 'Import students';
   static const String pickExcelFile = 'Choose Excel file';
   static const String downloadSampleTemplate = 'Download sample template';

@@ -13,7 +13,6 @@ import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_cubit.da
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_state.dart';
 import 'package:feemanager/features/fees/presentation/widgets/fee_row_widget.dart';
 import 'package:feemanager/features/fees/presentation/widgets/record_payment_confirm_dialog.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -34,7 +33,7 @@ class FeeTrackerTab extends StatelessWidget {
   /// Batch id.
   final String batchId;
 
-  /// Batch default fee for debug payments.
+  /// Batch default fee (shown when recording payment in a later milestone).
   final int batchDefaultFee;
 
   @override
@@ -51,7 +50,6 @@ class FeeTrackerTab extends StatelessWidget {
             onAction: () => context.read<FeeTrackerCubit>().started(
               branchId: branchId,
               batchId: batchId,
-              batchDefaultFee: batchDefaultFee,
             ),
           ),
           FeeTrackerLoaded() => _FeeTrackerBody(
@@ -152,19 +150,6 @@ class _FeeTrackerBody extends StatelessWidget {
                 selected: state.filter,
                 onChanged: context.read<FeeTrackerCubit>().filterChanged,
               ),
-              if (kDebugMode)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenHorizontal,
-                    vertical: AppSpacing.xs,
-                  ),
-                  child: Text(
-                    AppStrings.debugCreatePayment,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colors.creamMuted,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -188,7 +173,7 @@ class _FeeTrackerBody extends StatelessWidget {
                   return FeeRowWidget(
                     row: row,
                     onUnpaidTap: () => unawaited(
-                      _debugPay(
+                      _recordPayment(
                         context,
                         row,
                         state.selectedMonth,
@@ -210,7 +195,7 @@ class _FeeTrackerBody extends StatelessWidget {
     );
   }
 
-  Future<void> _debugPay(
+  Future<void> _recordPayment(
     BuildContext context,
     FeeRow row,
     DateTime selectedMonth,
@@ -224,9 +209,33 @@ class _FeeTrackerBody extends StatelessWidget {
     if (confirmed != true || !context.mounted) {
       return;
     }
-    final result = await context.read<FeeTrackerCubit>().debugRecordPayment(
-      row,
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            content: Row(
+              children: <Widget>[
+                const CircularProgressIndicator(),
+                const SizedBox(width: AppSpacing.lg),
+                Expanded(
+                  child: Text(
+                    AppStrings.generatingReceipt,
+                    style: Theme.of(dialogContext).textTheme.bodyLarge,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
+    final result = await context.read<FeeTrackerCubit>().recordPayment(row);
+    if (context.mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
     if (!context.mounted) {
       return;
     }

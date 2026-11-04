@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:feemanager/core/constants/firestore_keys.dart';
 import 'package:feemanager/core/utils/firebase_user_scope.dart';
-import 'package:feemanager/core/utils/month_key_utils.dart';
 import 'package:feemanager/features/fees/data/models/payment_model.dart';
 import 'package:feemanager/features/fees/domain/entities/payment.dart';
 import 'package:feemanager/features/students/data/models/student_model.dart';
@@ -82,38 +81,5 @@ class PaymentRemoteDataSource {
               .where((payment) => payment.status != FirestoreKeys.statusVoided)
               .toList(),
         );
-  }
-
-  /// Writes a minimal paid payment for UI testing before Cloud Functions exist.
-  Future<void> debugCreatePaidPayment({
-    required String branchId,
-    required String batchId,
-    required Student student,
-    required String monthKey,
-    required int batchDefaultFee,
-    required String ownerId,
-  }) async {
-    final parts = monthKey.split('-');
-    final year = int.parse(parts[0]);
-    final month = int.parse(parts[1]);
-    final docId = MonthKeyUtils.paymentDocumentId(
-      student.id,
-      DateTime(year, month),
-    );
-    final ref = _paymentsRef(ownerId, branchId, batchId).doc(docId);
-    final existing = await ref.get();
-    if (existing.exists) {
-      return;
-    }
-    await ref.set(
-      PaymentModel.debugCreateMap(
-        ownerId: ownerId,
-        branchId: branchId,
-        batchId: batchId,
-        student: student,
-        monthKey: monthKey,
-        batchDefaultFee: batchDefaultFee,
-      ),
-    );
   }
 }

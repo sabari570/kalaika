@@ -16,6 +16,7 @@ class Payment extends Equatable {
     required this.status,
     required this.receiptNo,
     required this.receiptUrl,
+    required this.receiptPath,
     required this.sentAt,
     required this.paidOn,
   });
@@ -56,6 +57,9 @@ class Payment extends Equatable {
   /// Receipt URL if available.
   final String? receiptUrl;
 
+  /// Cloud Storage object path for the PDF.
+  final String? receiptPath;
+
   /// When the receipt was marked sent.
   final DateTime? sentAt;
 
@@ -76,6 +80,7 @@ class Payment extends Equatable {
     status,
     receiptNo,
     receiptUrl,
+    receiptPath,
     sentAt,
     paidOn,
   ];

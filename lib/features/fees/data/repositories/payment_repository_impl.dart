@@ -1,17 +1,22 @@
 import 'package:feemanager/core/error/exception_mapper.dart';
 import 'package:feemanager/core/error/result.dart';
-import 'package:feemanager/core/utils/firebase_user_scope.dart';
+import 'package:feemanager/features/fees/data/datasources/payment_functions_datasource.dart';
 import 'package:feemanager/features/fees/data/datasources/payment_remote_datasource.dart';
+import 'package:feemanager/features/fees/domain/entities/generate_receipt_result.dart';
 import 'package:feemanager/features/fees/domain/entities/payment.dart';
 import 'package:feemanager/features/fees/domain/repositories/payment_repository.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
 
-/// Firestore implementation of [PaymentRepository].
+/// Firestore and Cloud Functions implementation of [PaymentRepository].
 class PaymentRepositoryImpl implements PaymentRepository {
   /// Creates the repository.
-  PaymentRepositoryImpl({required this.remoteDataSource});
+  PaymentRepositoryImpl({
+    required this.remoteDataSource,
+    required this.functionsDataSource,
+  });
 
   final PaymentRemoteDataSource remoteDataSource;
+  final PaymentFunctionsDataSource functionsDataSource;
 
   @override
   Stream<List<Student>> watchActiveStudents(
@@ -35,26 +40,32 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
-  Future<Result<void>> debugCreatePaidPayment({
+  Future<Result<GenerateReceiptResult>> generateReceipt({
     required String branchId,
     required String batchId,
     required Student student,
     required String monthKey,
-    required int batchDefaultFee,
+    required int amount,
+    required String mode,
+    required DateTime paidOn,
+    String? note,
   }) async {
     try {
-      final uid = FirebaseUserScope.requireUid();
-      await remoteDataSource.debugCreatePaidPayment(
+      final result = await functionsDataSource.generateReceipt(
         branchId: branchId,
         batchId: batchId,
-        student: student,
+        studentId: student.id,
         monthKey: monthKey,
-        batchDefaultFee: batchDefaultFee,
-        ownerId: uid,
+        amount: amount,
+        mode: mode,
+        paidOn: paidOn,
+        note: note,
       );
-      return const Success<void>(null);
+      return Success<GenerateReceiptResult>(result);
     } on Object catch (error, stackTrace) {
-      return Err<void>(ExceptionMapper.map(error, stackTrace));
+      return Err<GenerateReceiptResult>(
+        ExceptionMapper.map(error, stackTrace),
+      );
     }
   }
 }

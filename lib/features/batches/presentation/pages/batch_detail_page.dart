@@ -180,13 +180,11 @@ class _BatchDetailScaffoldState extends State<_BatchDetailScaffold> {
   void _syncListenersForTab(int index) {
     final branchId = widget.branchId;
     final batchId = widget.batchId;
-    final batch = widget.batch;
     if (index == 0) {
       context.read<StudentListCubit>().stopListening();
       context.read<FeeTrackerCubit>().started(
         branchId: branchId,
         batchId: batchId,
-        batchDefaultFee: batch.defaultFee,
       );
       return;
     }

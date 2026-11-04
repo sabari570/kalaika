@@ -2,13 +2,15 @@ import 'dart:async';
 
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/constants/firestore_keys.dart';
+import 'package:feemanager/core/constants/payment_constants.dart';
 import 'package:feemanager/core/error/failure.dart';
 import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/session/fee_month_session.dart';
 import 'package:feemanager/core/utils/month_key_utils.dart';
 import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
+import 'package:feemanager/features/fees/domain/entities/generate_receipt_result.dart';
 import 'package:feemanager/features/fees/domain/entities/payment.dart';
-import 'package:feemanager/features/fees/domain/usecases/debug_create_paid_payment.dart';
+import 'package:feemanager/features/fees/domain/usecases/generate_receipt.dart';
 import 'package:feemanager/features/fees/domain/usecases/watch_monthly_fees.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_state.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
@@ -20,36 +22,33 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
   FeeTrackerCubit({
     required this._watchActiveStudents,
     required this._watchMonthlyPayments,
-    required this._debugCreatePaidPayment,
+    required this._generateReceipt,
   }) : super(const FeeTrackerLoading());
 
   final WatchActiveStudentsForFees _watchActiveStudents;
   final WatchMonthlyPayments _watchMonthlyPayments;
-  final DebugCreatePaidPayment _debugCreatePaidPayment;
+  final GenerateReceipt _generateReceipt;
 
   StreamSubscription<List<Student>>? _studentsSubscription;
   StreamSubscription<List<Payment>>? _paymentsSubscription;
 
   String? _branchId;
   String? _batchId;
-  int _batchDefaultFee = 0;
   List<Student> _students = <Student>[];
   List<Payment> _payments = <Payment>[];
   DateTime _selectedMonth = FeeMonthSession.current();
   String _searchQuery = '';
   FeeListFilter _filter = FeeListFilter.all;
-  var _debugRecording = false;
+  var _recordingPayment = false;
 
   /// Starts listeners for the batch fee tab.
   void started({
     required String branchId,
     required String batchId,
-    required int batchDefaultFee,
   }) {
     final sameBatch = _branchId == branchId && _batchId == batchId;
     _branchId = branchId;
     _batchId = batchId;
-    _batchDefaultFee = batchDefaultFee;
     if (!sameBatch) {
       _selectedMonth = FeeMonthSession.current();
       _students = <Student>[];
@@ -108,9 +107,9 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
     _emitCombined();
   }
 
-  /// Debug-only: records a paid payment for an unpaid row.
-  Future<Result<void>> debugRecordPayment(FeeRow row) async {
-    if (_debugRecording) {
+  /// Records payment and generates a receipt via Cloud Functions.
+  Future<Result<void>> recordPayment(FeeRow row) async {
+    if (_recordingPayment) {
       return const Success<void>(null);
     }
     final branchId = _branchId;
@@ -121,20 +120,27 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
     if (row.displayStatus != FeeRowStatus.unpaid) {
       return const Success<void>(null);
     }
-    _debugRecording = true;
+    _recordingPayment = true;
     try {
       final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
-      return await _debugCreatePaidPayment(
-        DebugCreatePaidPaymentParams(
+      final paidOn = DateTime.now();
+      final result = await _generateReceipt(
+        GenerateReceiptParams(
           branchId: branchId,
           batchId: batchId,
           student: row.student,
           monthKey: monthKey,
-          batchDefaultFee: _batchDefaultFee,
+          amount: row.amount,
+          mode: PaymentConstants.modeCash,
+          paidOn: paidOn,
         ),
       );
+      return switch (result) {
+        Success<GenerateReceiptResult>() => const Success<void>(null),
+        Err<GenerateReceiptResult>(:final failure) => Err<void>(failure),
+      };
     } finally {
-      _debugRecording = false;
+      _recordingPayment = false;
     }
   }
 

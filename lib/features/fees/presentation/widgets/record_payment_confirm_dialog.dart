@@ -180,7 +180,7 @@ class RecordPaymentConfirmDialog extends StatelessWidget {
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: GradientButton(
-                    label: AppStrings.confirmPayment,
+                    label: AppStrings.confirmAndGenerateReceipt,
                     onPressed: () => Navigator.of(context).pop(true),
                   ),
                 ),

@@ -4,9 +4,11 @@ import 'package:feemanager/core/constants/app_routes.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/di/service_locator.dart';
 import 'package:feemanager/core/error/result.dart';
+import 'package:feemanager/core/widgets/kalaika_screen_body.dart';
 import 'package:feemanager/features/batches/domain/entities/batch.dart';
 import 'package:feemanager/features/batches/domain/usecases/get_batch.dart';
 import 'package:feemanager/features/batches/presentation/pages/batch_fees_tab.dart';
+import 'package:feemanager/features/batches/presentation/widgets/batch_detail_skeleton.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_cubit.dart';
 import 'package:feemanager/features/fees/presentation/pages/fee_tracker_tab.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_list_cubit.dart';
@@ -66,8 +68,11 @@ class _BatchDetailPageState extends State<BatchDetailPage>
         future: _batchFuture,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
+            return Scaffold(
+              appBar: AppBar(),
+              body: const KalaikaScreenBody(
+                child: BatchDetailSkeleton(),
+              ),
             );
           }
           return switch (snapshot.data!) {
@@ -247,9 +252,10 @@ class _BatchDetailScaffoldState extends State<_BatchDetailScaffold> {
           ),
         ],
       ),
-      body: Column(
-        children: <Widget>[
-          BatchDetailHeader(
+      body: KalaikaScreenBody(
+        child: Column(
+          children: <Widget>[
+            BatchDetailHeader(
             branchName: batch.branchName,
             danceStyle: batch.danceStyle,
             mode: batch.mode,
@@ -268,6 +274,7 @@ class _BatchDetailScaffoldState extends State<_BatchDetailScaffold> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

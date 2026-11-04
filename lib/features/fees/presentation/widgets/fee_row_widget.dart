@@ -1,3 +1,4 @@
+import 'package:feemanager/core/constants/app_durations.dart';
 import 'package:feemanager/core/constants/app_spacing.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
@@ -90,50 +91,58 @@ class _StatusControl extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    return switch (status) {
-      FeeRowStatus.unpaid => Semantics(
-        label: AppStrings.statusUnpaid,
-        button: true,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: IconButton(
-            onPressed: onUnpaidTap,
-            icon: Icon(
-              Icons.check_box_outline_blank,
-              color: colors.copper,
+    return AnimatedSwitcher(
+      duration: AppDurations.chipSwitch,
+      switchInCurve: AppDurations.easeOut,
+      switchOutCurve: AppDurations.easeOut,
+      child: switch (status) {
+        FeeRowStatus.unpaid => Semantics(
+          key: const ValueKey<String>('unpaid'),
+          label: AppStrings.statusUnpaid,
+          button: true,
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: IconButton(
+              onPressed: onUnpaidTap,
+              icon: Icon(
+                Icons.check_box_outline_blank,
+                color: colors.copper,
+              ),
             ),
           ),
         ),
-      ),
-      FeeRowStatus.pendingSend => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(Icons.indeterminate_check_box, color: colors.warning),
-          IconButton(
-            tooltip: AppStrings.sendReceipt,
-            onPressed: onSendTap,
-            icon: Icon(Icons.send_outlined, color: colors.warning),
-          ),
-          const StatusChip(status: FeeDisplayStatus.pendingSend),
-        ],
-      ),
-      FeeRowStatus.sent => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Icon(Icons.check_box, color: colors.success),
-          const SizedBox(width: AppSpacing.sm),
-          StatusChip(
-            status: FeeDisplayStatus.sent,
-            sentLabel: sentAt == null
-                ? AppStrings.statusSent
-                : AppStrings.statusSentOn.replaceFirst(
-                    '{date}',
-                    DateFormat('d MMM').format(sentAt!),
-                  ),
-          ),
-        ],
-      ),
-    };
+        FeeRowStatus.pendingSend => Row(
+          key: const ValueKey<String>('pending'),
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.indeterminate_check_box, color: colors.warning),
+            IconButton(
+              tooltip: AppStrings.sendReceipt,
+              onPressed: onSendTap,
+              icon: Icon(Icons.send_outlined, color: colors.warning),
+            ),
+            const StatusChip(status: FeeDisplayStatus.pendingSend),
+          ],
+        ),
+        FeeRowStatus.sent => Row(
+          key: const ValueKey<String>('sent'),
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(Icons.check_box, color: colors.success),
+            const SizedBox(width: AppSpacing.sm),
+            StatusChip(
+              status: FeeDisplayStatus.sent,
+              sentLabel: sentAt == null
+                  ? AppStrings.statusSent
+                  : AppStrings.statusSentOn.replaceFirst(
+                      '{date}',
+                      DateFormat('d MMM').format(sentAt!),
+                    ),
+            ),
+          ],
+        ),
+      },
+    );
   }
 }

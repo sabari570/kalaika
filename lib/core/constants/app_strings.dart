@@ -225,6 +225,7 @@ abstract final class AppStrings {
   static const String sectionTypography = 'Typography';
   static const String sectionMonthSelector = 'Month selector';
   static const String sectionFeedback = 'Feedback';
+  static const String sectionMotion = 'Motion and loading';
   static const String sampleStatLabel = 'Collected';
   static const String sampleStatValue = '12,500';
   static const String sampleEmptyMessage = 'No items to display.';

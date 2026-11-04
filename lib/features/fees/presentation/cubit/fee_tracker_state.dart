@@ -26,6 +26,7 @@ final class FeeTrackerLoaded extends FeeTrackerState {
     required this.searchQuery,
     required this.filter,
     required this.monthKey,
+    this.paymentsRefreshing = false,
   });
 
   final DateTime selectedMonth;
@@ -38,6 +39,9 @@ final class FeeTrackerLoaded extends FeeTrackerState {
   final FeeListFilter filter;
   final String monthKey;
 
+  /// True while loading payments for [monthKey].
+  final bool paymentsRefreshing;
+
   FeeTrackerLoaded copyWith({
     List<FeeRow>? rows,
     List<FeeRow>? filteredRows,
@@ -48,6 +52,7 @@ final class FeeTrackerLoaded extends FeeTrackerState {
     FeeListFilter? filter,
     DateTime? selectedMonth,
     String? monthKey,
+    bool? paymentsRefreshing,
   }) {
     return FeeTrackerLoaded(
       selectedMonth: selectedMonth ?? this.selectedMonth,
@@ -59,6 +64,7 @@ final class FeeTrackerLoaded extends FeeTrackerState {
       searchQuery: searchQuery ?? this.searchQuery,
       filter: filter ?? this.filter,
       monthKey: monthKey ?? this.monthKey,
+      paymentsRefreshing: paymentsRefreshing ?? this.paymentsRefreshing,
     );
   }
 
@@ -73,6 +79,7 @@ final class FeeTrackerLoaded extends FeeTrackerState {
     searchQuery,
     filter,
     monthKey,
+    paymentsRefreshing,
   ];
 }
 

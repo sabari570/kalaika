@@ -20,6 +20,21 @@ abstract final class AppDurations {
   /// Primary button loading indicator cycle.
   static const Duration buttonLoading = Duration(milliseconds: 300);
 
+  /// List content cross-fade when month or filter context changes.
+  static const Duration listCrossFade = Duration(milliseconds: 200);
+
+  /// Summary numbers and progress bar tween.
+  static const Duration metricTween = Duration(milliseconds: 200);
+
+  /// Shimmer sweep cycle.
+  static const Duration shimmer = Duration(milliseconds: 1400);
+
+  /// Async body fade between loading and ready.
+  static const Duration asyncSwitch = Duration(milliseconds: 200);
+
+  /// Loading overlay fade.
+  static const Duration overlayFade = Duration(milliseconds: 180);
+
   /// Default easing for entrance animations.
   static const Curve easeOut = Curves.easeOut;
 }

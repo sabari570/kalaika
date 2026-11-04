@@ -193,12 +193,15 @@ Gradients:
 - `AppTextField` (filled with `surfaceHigh`, copper focus border)
 - `MonthSelector` (previous and next arrows with month and year centered; tap opens a month-year picker)
 - `ConfirmDialog`, `LoadingOverlay`, `AppSnackBar`
+- `KalaikaProgressIndicator`, `KalaikaSkeletonBox`, `KalaikaListRowSkeleton`, `KalaikaScreenBody`, `KalaikaAsyncBody`, `KalaikaAnimatedMetric`
 
 ### 5.5 Motion
 - Splash: logo fades in and scales from 0.92 to 1.0 over 900 ms (ease-out), the subtitle fades in 300 ms later; navigate after about 2 seconds or when auth state resolves, whichever is later.
 - Page transitions: fade-through (200 to 250 ms).
 - Checkbox and status chip changes use `AnimatedSwitcher` (150 ms). No staggered animation on long lists.
-- Respect reduced-motion settings.
+- List screens use stale-while-revalidate: month changes and tab re-attach show skeleton or a thin progress line instead of replacing the whole screen with a spinner.
+- Summary metrics and progress bars tween over about 200 ms (`KalaikaAnimatedMetric`).
+- Respect reduced-motion settings (`MediaQuery.disableAnimations`); use `AppMotion` helpers for durations.
 
 ### 5.6 Assets
 - `assets/images/` with a `.gitkeep`. The developer will add `logo.png` (the logo cropped from the poster, transparent background). The app must run without it.

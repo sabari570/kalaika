@@ -20,13 +20,29 @@ final class BranchDetailLoaded extends BranchDetailState {
   const BranchDetailLoaded({
     required this.branch,
     required this.batches,
+    this.refreshing = false,
   });
 
   final Branch branch;
   final List<Batch> batches;
 
+  /// True while batches stream is re-attaching.
+  final bool refreshing;
+
+  BranchDetailLoaded copyWith({
+    Branch? branch,
+    List<Batch>? batches,
+    bool? refreshing,
+  }) {
+    return BranchDetailLoaded(
+      branch: branch ?? this.branch,
+      batches: batches ?? this.batches,
+      refreshing: refreshing ?? this.refreshing,
+    );
+  }
+
   @override
-  List<Object?> get props => <Object?>[branch, batches];
+  List<Object?> get props => <Object?>[branch, batches, refreshing];
 }
 
 /// Failed to load branch.

@@ -19,11 +19,21 @@ class StudentListCubit extends Cubit<StudentListState> {
   final WatchStudents _watchStudents;
   final SetStudentActive _setStudentActive;
   StreamSubscription<List<Student>>? _subscription;
+  String? _branchId;
+  String? _batchId;
 
   /// Starts listening for students in the batch.
   void started(String branchId, String batchId) {
+    final sameBatch = _branchId == branchId && _batchId == batchId;
+    _branchId = branchId;
+    _batchId = batchId;
     unawaited(_subscription?.cancel());
-    emit(const StudentListLoading());
+    final current = state;
+    if (sameBatch && current is StudentListLoaded) {
+      emit(current.copyWith(refreshing: true));
+    } else {
+      emit(const StudentListLoading());
+    }
     _subscription = _watchStudents(
       WatchStudentsParams(branchId: branchId, batchId: batchId),
     ).listen(

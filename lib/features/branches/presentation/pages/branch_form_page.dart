@@ -6,6 +6,8 @@ import 'package:feemanager/core/theme/app_colors.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/app_text_field.dart';
 import 'package:feemanager/core/widgets/gradient_button.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
+import 'package:feemanager/core/widgets/kalaika_screen_body.dart';
 import 'package:feemanager/core/widgets/loading_overlay.dart';
 import 'package:feemanager/core/widgets/outlined_copper_button.dart';
 import 'package:feemanager/features/branches/presentation/cubit/branch_form_cubit.dart';
@@ -96,8 +98,10 @@ class _BranchFormPageState extends State<BranchFormPage> {
           child: Scaffold(
             appBar: AppBar(title: Text(title)),
             body: ready == null
-                ? const Center(child: CircularProgressIndicator())
-                : SafeArea(
+                ? const Center(
+                    child: KalaikaProgressIndicator(),
+                  )
+                : KalaikaScreenBody(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.fromLTRB(
                         AppSpacing.screenHorizontal,

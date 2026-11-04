@@ -1,6 +1,8 @@
+import 'package:feemanager/core/constants/app_durations.dart';
 import 'package:feemanager/core/constants/app_spacing.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
+import 'package:feemanager/core/theme/app_motion.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -81,10 +83,31 @@ class _MonthSelectorState extends State<MonthSelector> {
             borderRadius: BorderRadius.circular(8),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-              child: Text(
-                _format.format(_month),
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.titleLarge,
+              child: AnimatedSwitcher(
+                duration: AppMotion.duration(
+                  context,
+                  AppDurations.listCrossFade,
+                ),
+                switchInCurve: AppDurations.easeOut,
+                switchOutCurve: AppDurations.easeOut,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.08, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Text(
+                  _format.format(_month),
+                  key: ValueKey<String>(_format.format(_month)),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
             ),
           ),

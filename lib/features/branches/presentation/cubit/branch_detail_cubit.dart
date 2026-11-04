@@ -23,10 +23,18 @@ class BranchDetailCubit extends Cubit<BranchDetailState> {
   final ReconcileStudentCounters _reconcileStudentCounters;
   StreamSubscription<List<Batch>>? _batchSubscription;
   Branch? _branch;
+  String? _branchId;
 
   /// Loads the branch and listens to its batches.
   Future<void> started(String branchId) async {
-    emit(const BranchDetailLoading());
+    final sameBranch = _branchId == branchId;
+    _branchId = branchId;
+    final current = state;
+    if (sameBranch && current is BranchDetailLoaded) {
+      emit(current.copyWith(refreshing: true));
+    } else {
+      emit(const BranchDetailLoading());
+    }
     final result = await _getBranch(branchId);
     switch (result) {
       case Success(:final value):
@@ -37,7 +45,12 @@ class BranchDetailCubit extends Cubit<BranchDetailState> {
           (batches) {
             final branch = _branch;
             if (branch != null) {
-              emit(BranchDetailLoaded(branch: branch, batches: batches));
+              emit(
+                BranchDetailLoaded(
+                  branch: branch,
+                  batches: batches,
+                ),
+              );
             }
           },
         );

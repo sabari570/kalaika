@@ -2,6 +2,7 @@ import 'package:feemanager/core/constants/app_radius.dart';
 import 'package:feemanager/core/constants/app_spacing.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
 import 'package:feemanager/core/theme/app_text_theme.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -58,8 +59,8 @@ class GradientButton extends StatelessWidget {
                     ? SizedBox(
                         width: 22,
                         height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                        child: KalaikaProgressIndicator(
+                          size: KalaikaProgressSize.small,
                           color: colors.onCopper,
                         ),
                       )

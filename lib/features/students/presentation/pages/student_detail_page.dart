@@ -11,6 +11,7 @@ import 'package:feemanager/core/utils/age_utils.dart';
 import 'package:feemanager/core/utils/phone_utils.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/kalaika_card.dart';
+import 'package:feemanager/core/widgets/kalaika_screen_body.dart';
 import 'package:feemanager/core/widgets/status_chip.dart';
 import 'package:feemanager/features/fees/domain/usecases/payment_receipt_actions.dart';
 import 'package:feemanager/features/fees/presentation/utils/receipt_share_utils.dart';
@@ -18,6 +19,7 @@ import 'package:feemanager/features/students/domain/entities/student.dart';
 import 'package:feemanager/features/students/domain/entities/student_payment_summary.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_detail_cubit.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_detail_state.dart';
+import 'package:feemanager/features/students/presentation/widgets/student_detail_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -49,7 +51,9 @@ class StudentDetailPage extends StatelessWidget {
       builder: (context, state) {
         return switch (state) {
           StudentDetailLoading() => const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+            body: KalaikaScreenBody(
+              child: StudentDetailSkeleton(),
+            ),
           ),
           StudentDetailFailure(:final message) => Scaffold(
             appBar: AppBar(),
@@ -105,7 +109,8 @@ class _StudentDetailBody extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
+      body: KalaikaScreenBody(
+        child: ListView(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.screenHorizontal,
           vertical: AppSpacing.lg,
@@ -200,6 +205,7 @@ class _StudentDetailBody extends StatelessWidget {
               ),
             ),
         ],
+        ),
       ),
     );
   }

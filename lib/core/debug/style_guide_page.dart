@@ -6,8 +6,11 @@ import 'package:feemanager/core/widgets/app_text_field.dart';
 import 'package:feemanager/core/widgets/confirm_dialog.dart';
 import 'package:feemanager/core/widgets/empty_state.dart';
 import 'package:feemanager/core/widgets/gradient_button.dart';
+import 'package:feemanager/core/widgets/kalaika_async_body.dart';
 import 'package:feemanager/core/widgets/kalaika_card.dart';
 import 'package:feemanager/core/widgets/kalaika_logo.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
+import 'package:feemanager/core/widgets/kalaika_skeleton.dart';
 import 'package:feemanager/core/widgets/loading_overlay.dart';
 import 'package:feemanager/core/widgets/month_selector.dart';
 import 'package:feemanager/core/widgets/ornamental_divider.dart';
@@ -128,6 +131,40 @@ class _StyleGuidePageState extends State<StyleGuidePage> {
                   StatusChip(
                     status: FeeDisplayStatus.sent,
                     sentLabel: 'Sent on 12 Oct',
+                  ),
+                ],
+              ),
+            ),
+            _Section(
+              title: AppStrings.sectionMotion,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: <Widget>[
+                      KalaikaProgressIndicator(
+                        size: KalaikaProgressSize.small,
+                      ),
+                      KalaikaProgressIndicator(),
+                      KalaikaProgressIndicator(
+                        size: KalaikaProgressSize.large,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  const KalaikaListRowSkeleton(),
+                  const SizedBox(height: AppSpacing.md),
+                  KalaikaAsyncBody(
+                    phase: _loading
+                        ? KalaikaAsyncPhase.refreshing
+                        : KalaikaAsyncPhase.ready,
+                    child: KalaikaCard(
+                      child: Text(
+                        AppStrings.sampleSectionTitle,
+                        style: theme.titleMedium,
+                      ),
+                    ),
                   ),
                 ],
               ),

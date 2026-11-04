@@ -7,6 +7,9 @@ import 'package:feemanager/core/theme/app_colors.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/app_text_field.dart';
 import 'package:feemanager/core/widgets/empty_state.dart';
+import 'package:feemanager/core/widgets/kalaika_animated_metric.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
+import 'package:feemanager/core/widgets/kalaika_skeleton.dart';
 import 'package:feemanager/core/widgets/month_selector.dart';
 import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
 import 'package:feemanager/features/fees/domain/entities/record_payment_result.dart';
@@ -45,7 +48,9 @@ class FeeTrackerTab extends StatelessWidget {
       builder: (context, state) {
         return switch (state) {
           FeeTrackerLoading() => const Center(
-            child: CircularProgressIndicator(),
+            child: KalaikaProgressIndicator(
+              size: KalaikaProgressSize.large,
+            ),
           ),
           FeeTrackerFailure(:final message) => EmptyState(
             message: message,
@@ -77,12 +82,6 @@ class _FeeTrackerBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.appColors;
-    final progress = state.totalCount == 0
-        ? 0.0
-        : state.paidCount / state.totalCount;
-    final collectedText = NumberFormat.decimalPattern().format(
-      state.collected,
-    );
 
     return CustomScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -107,36 +106,62 @@ class _FeeTrackerBody extends StatelessWidget {
                   AppSpacing.screenHorizontal,
                   AppSpacing.sm,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      AppStrings.feePaidOfTotal
-                          .replaceFirst('{paid}', '${state.paidCount}')
-                          .replaceFirst('{total}', '${state.totalCount}'),
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: AppSpacing.xs),
-                    Text(
-                      AppStrings.feeCollected.replaceFirst(
-                        '{amount}',
-                        collectedText,
-                      ),
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: colors.creamMuted,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: 6,
-                        color: colors.copper,
-                        backgroundColor: colors.surfaceHigh,
-                      ),
-                    ),
-                  ],
+                child: KalaikaAnimatedMetric(
+                  value: state.paidCount.toDouble(),
+                  builder: (context, paidAnimated) {
+                    return KalaikaAnimatedMetric(
+                      value: state.collected.toDouble(),
+                      builder: (context, collectedAnimated) {
+                        final paid = paidAnimated.round();
+                        final collected = collectedAnimated.round();
+                        final progress = state.totalCount == 0
+                            ? 0.0
+                            : paid / state.totalCount;
+                        final collectedText = NumberFormat.decimalPattern()
+                            .format(collected);
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              AppStrings.feePaidOfTotal
+                                  .replaceFirst('{paid}', '$paid')
+                                  .replaceFirst(
+                                    '{total}',
+                                    '${state.totalCount}',
+                                  ),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              AppStrings.feeCollected.replaceFirst(
+                                '{amount}',
+                                collectedText,
+                              ),
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyLarge
+                                  ?.copyWith(color: colors.creamMuted),
+                            ),
+                            const SizedBox(height: AppSpacing.sm),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: KalaikaAnimatedMetric(
+                                value: progress,
+                                builder: (context, animatedProgress) {
+                                  return LinearProgressIndicator(
+                                    value: animatedProgress.clamp(0.0, 1.0),
+                                    minHeight: 6,
+                                    color: colors.copper,
+                                    backgroundColor: colors.surfaceHigh,
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
                 ),
               ),
               Padding(
@@ -156,7 +181,22 @@ class _FeeTrackerBody extends StatelessWidget {
             ],
           ),
         ),
-        if (state.filteredRows.isEmpty)
+        if (state.paymentsRefreshing)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenHorizontal,
+              AppSpacing.sm,
+              AppSpacing.screenHorizontal,
+              AppSpacing.lg,
+            ),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (_, index) => const KalaikaListRowSkeleton(),
+                childCount: 6,
+              ),
+            ),
+          )
+        else if (state.filteredRows.isEmpty)
           const SliverFillRemaining(
             hasScrollBody: false,
             child: EmptyState(message: AppStrings.noMatchingFeeRows),
@@ -174,6 +214,9 @@ class _FeeTrackerBody extends StatelessWidget {
                 (context, index) {
                   final row = state.filteredRows[index];
                   return FeeRowWidget(
+                    key: ValueKey<String>(
+                      '${state.monthKey}-${row.student.id}',
+                    ),
                     row: row,
                     onUnpaidTap: () => unawaited(
                       _recordPayment(
@@ -222,7 +265,7 @@ class _FeeTrackerBody extends StatelessWidget {
           child: AlertDialog(
             content: Row(
               children: <Widget>[
-                const CircularProgressIndicator(),
+                const KalaikaProgressIndicator(),
                 const SizedBox(width: AppSpacing.lg),
                 Expanded(
                   child: Text(

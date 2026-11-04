@@ -4,7 +4,10 @@ import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
 import 'package:feemanager/core/utils/batch_schedule_formatter.dart';
 import 'package:feemanager/core/widgets/empty_state.dart';
+import 'package:feemanager/core/widgets/kalaika_async_body.dart';
 import 'package:feemanager/core/widgets/kalaika_card.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
+import 'package:feemanager/core/widgets/kalaika_screen_body.dart';
 import 'package:feemanager/features/batches/domain/entities/batch.dart';
 import 'package:feemanager/features/batches/presentation/widgets/mode_chip.dart';
 import 'package:feemanager/features/branches/presentation/cubit/branch_detail_cubit.dart';
@@ -29,21 +32,32 @@ class BranchDetailPage extends StatelessWidget {
         label: const Text(AppStrings.newBatch),
         icon: const Icon(Icons.add),
       ),
-      body: BlocBuilder<BranchDetailCubit, BranchDetailState>(
-        builder: (context, state) {
-          return switch (state) {
-            BranchDetailLoading() => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            BranchDetailFailure(:final message) => EmptyState(
-              message: message,
-              actionLabel: AppStrings.retry,
-              onAction: () =>
-                  context.read<BranchDetailCubit>().started(branchId),
-            ),
-            BranchDetailLoaded(:final branch, :final batches) =>
-              CustomScrollView(
-              slivers: <Widget>[
+      body: KalaikaScreenBody(
+        child: BlocBuilder<BranchDetailCubit, BranchDetailState>(
+          builder: (context, state) {
+            return switch (state) {
+              BranchDetailLoading() => const Center(
+                child: KalaikaProgressIndicator(
+                  size: KalaikaProgressSize.large,
+                ),
+              ),
+              BranchDetailFailure(:final message) => EmptyState(
+                message: message,
+                actionLabel: AppStrings.retry,
+                onAction: () =>
+                    context.read<BranchDetailCubit>().started(branchId),
+              ),
+              BranchDetailLoaded(
+                :final branch,
+                :final batches,
+                :final refreshing,
+              ) =>
+                KalaikaAsyncBody(
+                  phase: refreshing
+                      ? KalaikaAsyncPhase.refreshing
+                      : KalaikaAsyncPhase.ready,
+                  child: CustomScrollView(
+                    slivers: <Widget>[
                 SliverAppBar(
                   pinned: true,
                   title: Text(branch.name),
@@ -109,8 +123,10 @@ class BranchDetailPage extends StatelessWidget {
                   ),
               ],
             ),
+                ),
           };
         },
+        ),
       ),
     );
   }

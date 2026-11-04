@@ -48,6 +48,7 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
   String _searchQuery = '';
   FeeListFilter _filter = FeeListFilter.all;
   var _recordingPayment = false;
+  var _paymentsGeneration = 0;
 
   /// Starts listeners for the batch fee tab.
   void started({
@@ -102,7 +103,11 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
   void monthChanged(DateTime month) {
     _selectedMonth = DateTime(month.year, month.month);
     FeeMonthSession.save(_selectedMonth);
-    _listenPayments();
+    _payments = <Payment>[];
+    _paymentsGeneration++;
+    final generation = _paymentsGeneration;
+    _emitCombined(paymentsRefreshing: true);
+    _listenPayments(generation);
   }
 
   void searchChanged(String query) {
@@ -221,13 +226,14 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
     );
   }
 
-  void _listenPayments() {
+  void _listenPayments([int? generation]) {
     final branchId = _branchId;
     final batchId = _batchId;
     if (branchId == null || batchId == null) {
       return;
     }
     final monthKey = MonthKeyUtils.toMonthKey(_selectedMonth);
+    final listenGeneration = generation ?? _paymentsGeneration;
     unawaited(_paymentsSubscription?.cancel());
     _paymentsSubscription = _watchMonthlyPayments(
       WatchMonthlyPaymentsParams(
@@ -237,6 +243,9 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
       ),
     ).listen(
       (payments) {
+        if (listenGeneration != _paymentsGeneration) {
+          return;
+        }
         _payments = payments;
         _emitCombined();
       },
@@ -244,7 +253,7 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
     );
   }
 
-  void _emitCombined() {
+  void _emitCombined({bool paymentsRefreshing = false}) {
     final paymentByStudent = <String, Payment>{
       for (final payment in _payments) payment.studentId: payment,
     };
@@ -278,6 +287,7 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
         searchQuery: _searchQuery,
         filter: _filter,
         monthKey: MonthKeyUtils.toMonthKey(_selectedMonth),
+        paymentsRefreshing: paymentsRefreshing,
       ),
     );
   }

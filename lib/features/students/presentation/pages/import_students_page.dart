@@ -6,6 +6,8 @@ import 'package:feemanager/core/constants/app_strings.dart';
 import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/gradient_button.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
+import 'package:feemanager/core/widgets/kalaika_screen_body.dart';
 import 'package:feemanager/core/widgets/outlined_copper_button.dart';
 import 'package:feemanager/features/students/domain/entities/import_preview_row.dart';
 import 'package:feemanager/features/students/presentation/cubit/import_students_cubit.dart';
@@ -67,7 +69,8 @@ class ImportStudentsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.importStudentsTitle)),
-      body: BlocConsumer<ImportStudentsCubit, ImportStudentsState>(
+      body: KalaikaScreenBody(
+        child: BlocConsumer<ImportStudentsCubit, ImportStudentsState>(
         listener: (context, state) {
           if (state is ImportStudentsFailure) {
             AppSnackBar.showError(context, state.message);
@@ -94,7 +97,9 @@ class ImportStudentsPage extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  CircularProgressIndicator(),
+                  KalaikaProgressIndicator(
+                    size: KalaikaProgressSize.large,
+                  ),
                   SizedBox(height: AppSpacing.lg),
                   Text(AppStrings.importParsing),
                 ],
@@ -129,6 +134,7 @@ class ImportStudentsPage extends StatelessWidget {
             ),
           };
         },
+        ),
       ),
     );
   }

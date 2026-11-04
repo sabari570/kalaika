@@ -8,7 +8,9 @@ import 'package:feemanager/core/theme/app_colors.dart';
 import 'package:feemanager/core/utils/phone_utils.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/empty_state.dart';
+import 'package:feemanager/core/widgets/kalaika_async_body.dart';
 import 'package:feemanager/core/widgets/kalaika_card.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_list_cubit.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_list_state.dart';
@@ -36,8 +38,14 @@ class BatchStudentsTab extends StatelessWidget {
     return BlocBuilder<StudentListCubit, StudentListState>(
       builder: (context, state) {
         return switch (state) {
-          StudentListLoading() => const Center(
-            child: CircularProgressIndicator(),
+          StudentListLoading() => const KalaikaAsyncBody(
+            phase: KalaikaAsyncPhase.loading,
+            loadingPlaceholder: Center(
+              child: KalaikaProgressIndicator(
+                size: KalaikaProgressSize.large,
+              ),
+            ),
+            child: SizedBox.shrink(),
           ),
           StudentListFailure(:final message) => EmptyState(
             message: message,
@@ -47,8 +55,12 @@ class BatchStudentsTab extends StatelessWidget {
               batchId,
             ),
           ),
-          StudentListLoaded(:final students) =>
-            students.isEmpty
+          StudentListLoaded(:final students, :final refreshing) =>
+            KalaikaAsyncBody(
+              phase: refreshing
+                  ? KalaikaAsyncPhase.refreshing
+                  : KalaikaAsyncPhase.ready,
+              child: students.isEmpty
                 ? EmptyState(
                     message: AppStrings.noStudentsYet,
                     actionLabel: AppStrings.addStudent,
@@ -75,6 +87,7 @@ class BatchStudentsTab extends StatelessWidget {
                       );
                     },
                   ),
+            ),
         };
       },
     );

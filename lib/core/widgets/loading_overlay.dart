@@ -1,4 +1,7 @@
+import 'package:feemanager/core/constants/app_durations.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
+import 'package:feemanager/core/theme/app_motion.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
 import 'package:flutter/material.dart';
 
 /// Blocks interaction with a semi-transparent loading veil.
@@ -18,16 +21,25 @@ class LoadingOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = context.appColors;
+    final fadeDuration = AppMotion.duration(
+      context,
+      AppDurations.overlayFade,
+    );
     return Stack(
       children: <Widget>[
         child,
         if (isLoading)
           Positioned.fill(
-            child: ColoredBox(
-              color: AppPalette.background.withValues(alpha: 0.6),
-              child: Center(
-                child: CircularProgressIndicator(color: colors.copper),
+            child: AnimatedOpacity(
+              opacity: 1,
+              duration: fadeDuration,
+              child: ColoredBox(
+                color: AppPalette.background.withValues(alpha: 0.6),
+                child: const Center(
+                  child: KalaikaProgressIndicator(
+                    size: KalaikaProgressSize.large,
+                  ),
+                ),
               ),
             ),
           ),

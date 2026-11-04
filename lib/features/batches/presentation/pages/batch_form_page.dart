@@ -9,6 +9,8 @@ import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/app_text_field.dart';
 import 'package:feemanager/core/widgets/confirm_dialog.dart';
 import 'package:feemanager/core/widgets/gradient_button.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
+import 'package:feemanager/core/widgets/kalaika_screen_body.dart';
 import 'package:feemanager/core/widgets/loading_overlay.dart';
 import 'package:feemanager/core/widgets/outlined_copper_button.dart';
 import 'package:feemanager/features/batches/domain/entities/batch_draft.dart';
@@ -214,8 +216,10 @@ class _BatchFormPageState extends State<BatchFormPage> {
               ],
             ),
             body: ready == null
-                ? const Center(child: CircularProgressIndicator())
-                : SafeArea(
+                ? const Center(
+                    child: KalaikaProgressIndicator(),
+                  )
+                : KalaikaScreenBody(
                     child: SingleChildScrollView(
                       padding: EdgeInsets.fromLTRB(
                         AppSpacing.screenHorizontal,

@@ -9,6 +9,7 @@ import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/confirm_dialog.dart';
 import 'package:feemanager/core/widgets/empty_state.dart';
 import 'package:feemanager/core/widgets/kalaika_card.dart';
+import 'package:feemanager/core/widgets/kalaika_progress_indicator.dart';
 import 'package:feemanager/features/branches/domain/entities/branch.dart';
 import 'package:feemanager/features/branches/presentation/cubit/branch_list_cubit.dart';
 import 'package:feemanager/features/branches/presentation/cubit/branch_list_state.dart';
@@ -55,12 +56,13 @@ class BranchesPage extends StatelessWidget {
         label: const Text(AppStrings.newBranch),
         icon: const Icon(Icons.add),
       ),
-      body: SafeArea(
-        child: BlocBuilder<BranchListCubit, BranchListState>(
+      body: BlocBuilder<BranchListCubit, BranchListState>(
           builder: (context, state) {
             return switch (state) {
               BranchListLoading() => const Center(
-                child: CircularProgressIndicator(),
+                child: KalaikaProgressIndicator(
+                  size: KalaikaProgressSize.large,
+                ),
               ),
               BranchListFailure(:final message) => EmptyState(
                 message: message,
@@ -102,7 +104,6 @@ class BranchesPage extends StatelessWidget {
             };
           },
         ),
-      ),
     );
   }
 }

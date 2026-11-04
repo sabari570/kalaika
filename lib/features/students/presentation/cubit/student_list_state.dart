@@ -16,12 +16,28 @@ final class StudentListLoading extends StudentListState {
 
 /// Students visible.
 final class StudentListLoaded extends StudentListState {
-  const StudentListLoaded(this.students);
+  const StudentListLoaded(
+    this.students, {
+    this.refreshing = false,
+  });
 
   final List<Student> students;
 
+  /// True while re-attaching the stream.
+  final bool refreshing;
+
+  StudentListLoaded copyWith({
+    List<Student>? students,
+    bool? refreshing,
+  }) {
+    return StudentListLoaded(
+      students ?? this.students,
+      refreshing: refreshing ?? this.refreshing,
+    );
+  }
+
   @override
-  List<Object?> get props => <Object?>[students];
+  List<Object?> get props => <Object?>[students, refreshing];
 }
 
 /// Stream failed.

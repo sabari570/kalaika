@@ -22,6 +22,9 @@ typedef ReceiptSharePayload = ({
   String shareMessage,
 });
 
+/// Whether share UI opened and whether the app went to background.
+typedef ReceiptShareLaunch = ({bool launched, bool leftApp});
+
 /// Share flow and mark-sent prompt after delivery.
 abstract final class ReceiptDeliveryUtils {
   /// Guardian name for receipts, or the student name when absent.
@@ -97,7 +100,7 @@ abstract final class ReceiptDeliveryUtils {
         BlockingProgressDialog.hide(context);
         AppSnackBar.showError(context, failure.message);
       case Success(:final value):
-        final leftApp = await _deliverShare(
+        final delivery = await _deliverShare(
           context: context,
           student: row.student,
           pdfBytes: value.pdfBytes,
@@ -112,7 +115,7 @@ abstract final class ReceiptDeliveryUtils {
             row.displayStatus != FeeRowStatus.pendingSend) {
           return;
         }
-        if (leftApp) {
+        if (delivery.leftApp) {
           await _waitForResume();
         }
         if (!context.mounted) {
@@ -141,7 +144,7 @@ abstract final class ReceiptDeliveryUtils {
         message: AppStrings.preparingReceiptShare,
       );
     }
-    final leftApp = await _deliverShare(
+    final delivery = await _deliverShare(
       context: context,
       student: row.student,
       pdfBytes: pdfBytes,
@@ -156,7 +159,7 @@ abstract final class ReceiptDeliveryUtils {
         row.displayStatus != FeeRowStatus.pendingSend) {
       return;
     }
-    if (leftApp) {
+    if (delivery.leftApp) {
       await _waitForResume();
     }
     if (!context.mounted) {
@@ -195,7 +198,7 @@ abstract final class ReceiptDeliveryUtils {
     }
   }
 
-  static Future<bool> _deliverShare({
+  static Future<ReceiptShareLaunch> _deliverShare({
     required BuildContext context,
     required Student student,
     required Uint8List pdfBytes,
@@ -207,7 +210,7 @@ abstract final class ReceiptDeliveryUtils {
       student.whatsappNumber,
     );
     if (whatsappDigits != null) {
-      final opened = await _openWhatsAppShare(
+      final direct = await _openWhatsAppShare(
         context: context,
         pdfBytes: pdfBytes,
         receiptNo: receiptNo,
@@ -215,12 +218,25 @@ abstract final class ReceiptDeliveryUtils {
         phoneDigits: whatsappDigits,
         dismissPreparingOverlay: dismissPreparingOverlay,
       );
-      if (opened) {
-        return true;
+      if (direct.launched) {
+        return direct;
       }
     }
     if (!context.mounted) {
-      return false;
+      return (launched: false, leftApp: false);
+    }
+    final picker = await _openWhatsAppPickerShare(
+      context: context,
+      pdfBytes: pdfBytes,
+      receiptNo: receiptNo,
+      shareMessage: shareMessage,
+      dismissPreparingOverlay: BlockingProgressDialog.isVisible,
+    );
+    if (picker.launched) {
+      return picker;
+    }
+    if (!context.mounted) {
+      return (launched: false, leftApp: false);
     }
     return _openSystemShareSheet(
       context: context,
@@ -231,7 +247,7 @@ abstract final class ReceiptDeliveryUtils {
     );
   }
 
-  static Future<bool> _openWhatsAppShare({
+  static Future<ReceiptShareLaunch> _openWhatsAppShare({
     required BuildContext context,
     required Uint8List pdfBytes,
     required String receiptNo,
@@ -271,16 +287,65 @@ abstract final class ReceiptDeliveryUtils {
       );
       if (!opened) {
         dismissOverlay();
-        return false;
+        return (launched: false, leftApp: false);
       }
+      await _allowLifecycleToPause(leftApp: () => leftApp = true);
     } finally {
       binding.removeObserver(shareObserver);
       dismissOverlay();
     }
-    return leftApp;
+    return (launched: true, leftApp: leftApp);
   }
 
-  static Future<bool> _openSystemShareSheet({
+  static Future<ReceiptShareLaunch> _openWhatsAppPickerShare({
+    required BuildContext context,
+    required Uint8List pdfBytes,
+    required String receiptNo,
+    required String shareMessage,
+    required bool dismissPreparingOverlay,
+  }) async {
+    var leftApp = false;
+    var overlayDismissed = !dismissPreparingOverlay;
+
+    void dismissOverlay() {
+      if (overlayDismissed || !context.mounted) {
+        return;
+      }
+      if (!BlockingProgressDialog.isVisible) {
+        overlayDismissed = true;
+        return;
+      }
+      overlayDismissed = true;
+      BlockingProgressDialog.hide(context);
+    }
+
+    final shareObserver = _LifecycleObserver((state) {
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.paused) {
+        leftApp = true;
+        dismissOverlay();
+      }
+    });
+    final binding = WidgetsBinding.instance..addObserver(shareObserver);
+    try {
+      final opened = await ReceiptShareUtils.sharePdfViaWhatsAppPicker(
+        pdfBytes: pdfBytes,
+        receiptNo: receiptNo,
+        text: shareMessage,
+      );
+      if (!opened) {
+        dismissOverlay();
+        return (launched: false, leftApp: false);
+      }
+      await _allowLifecycleToPause(leftApp: () => leftApp = true);
+    } finally {
+      binding.removeObserver(shareObserver);
+      dismissOverlay();
+    }
+    return (launched: true, leftApp: leftApp);
+  }
+
+  static Future<ReceiptShareLaunch> _openSystemShareSheet({
     required BuildContext context,
     required Uint8List pdfBytes,
     required String receiptNo,
@@ -316,11 +381,43 @@ abstract final class ReceiptDeliveryUtils {
         receiptNo: receiptNo,
         text: shareMessage,
       );
+      await _allowLifecycleToPause(leftApp: () => leftApp = true);
     } finally {
       binding.removeObserver(shareObserver);
       dismissOverlay();
     }
-    return leftApp;
+    return (launched: true, leftApp: leftApp);
+  }
+
+  static Future<void> _allowLifecycleToPause({
+    required void Function() leftApp,
+  }) async {
+    if (WidgetsBinding.instance.lifecycleState ==
+            AppLifecycleState.inactive ||
+        WidgetsBinding.instance.lifecycleState ==
+            AppLifecycleState.paused) {
+      leftApp();
+      return;
+    }
+    final completer = Completer<void>();
+    final observer = _LifecycleObserver((state) {
+      if (state == AppLifecycleState.inactive ||
+          state == AppLifecycleState.paused) {
+        leftApp();
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+      }
+    });
+    final binding = WidgetsBinding.instance..addObserver(observer);
+    try {
+      await completer.future.timeout(
+        const Duration(milliseconds: 400),
+        onTimeout: () {},
+      );
+    } finally {
+      binding.removeObserver(observer);
+    }
   }
 
   static Future<void> _waitForResume() async {

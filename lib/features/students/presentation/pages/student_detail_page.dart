@@ -124,9 +124,7 @@ class _StudentDetailBody extends StatelessWidget {
           IconButton(
             tooltip: AppStrings.editStudent,
             icon: const Icon(Icons.edit_outlined),
-            onPressed: () => context.push(
-              AppRoutes.studentEditPath(branchId, batchId, studentId),
-            ),
+            onPressed: () => unawaited(_openEdit(context)),
           ),
           IconButton(
             tooltip: AppStrings.delete,
@@ -234,6 +232,15 @@ class _StudentDetailBody extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openEdit(BuildContext context) async {
+    final updated = await context.push<Student?>(
+      AppRoutes.studentEditPath(branchId, batchId, studentId),
+    );
+    if (updated != null && context.mounted) {
+      context.read<StudentDetailCubit>().applyStudentUpdate(updated);
+    }
   }
 
   Future<void> _confirmDelete(BuildContext context) async {

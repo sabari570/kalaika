@@ -63,7 +63,7 @@ abstract final class ReceiptShareUtils {
     if (!Platform.isAndroid) {
       return false;
     }
-    if (!await WhatsAppShareUtils.isNativeShareAvailable()) {
+    if (!await WhatsAppShareUtils.isWhatsAppInstalled()) {
       return false;
     }
     final path = await writePdfToTempFile(
@@ -73,6 +73,28 @@ abstract final class ReceiptShareUtils {
     return WhatsAppShareUtils.sharePdfToChat(
       pdfPath: path,
       phoneDigits: phoneDigits,
+      text: text,
+    );
+  }
+
+  /// Opens WhatsApp so the user can pick a chat; PDF and [text] are attached.
+  static Future<bool> sharePdfViaWhatsAppPicker({
+    required List<int> pdfBytes,
+    required String receiptNo,
+    String? text,
+  }) async {
+    if (!Platform.isAndroid) {
+      return false;
+    }
+    if (!await WhatsAppShareUtils.isWhatsAppInstalled()) {
+      return false;
+    }
+    final path = await writePdfToTempFile(
+      pdfBytes: pdfBytes,
+      receiptNo: receiptNo,
+    );
+    return WhatsAppShareUtils.sharePdfToWhatsAppApp(
+      pdfPath: path,
       text: text,
     );
   }

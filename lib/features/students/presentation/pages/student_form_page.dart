@@ -104,7 +104,7 @@ class _StudentFormPageState extends State<StudentFormPage> {
     return BlocConsumer<StudentFormCubit, StudentFormState>(
       listener: (context, state) {
         if (state is StudentFormSuccess) {
-          context.pop();
+          context.pop(state.student);
         }
         if (state is StudentFormFailure) {
           AppSnackBar.showError(context, state.message);

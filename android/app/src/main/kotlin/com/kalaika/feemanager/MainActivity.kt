@@ -1,6 +1,7 @@
 package com.kalaika.feemanager
 
 import android.content.ActivityNotFoundException
+import android.content.ClipData
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -29,11 +30,27 @@ class MainActivity : FlutterActivity() {
                         result.success(false)
                         return@setMethodCallHandler
                     }
+                    val jid = "${phoneDigits}@s.whatsapp.net"
                     result.success(
-                        sharePdfToWhatsApp(
+                        launchWhatsAppPdfShare(
                             pdfPath = pdfPath,
-                            phoneDigits = phoneDigits,
                             text = text,
+                            jid = jid,
+                        ),
+                    )
+                }
+                "sharePdfToWhatsApp" -> {
+                    val pdfPath = call.argument<String>("pdfPath")
+                    val text = call.argument<String>("text")
+                    if (pdfPath.isNullOrBlank()) {
+                        result.success(false)
+                        return@setMethodCallHandler
+                    }
+                    result.success(
+                        launchWhatsAppPdfShare(
+                            pdfPath = pdfPath,
+                            text = text,
+                            jid = null,
                         ),
                     )
                 }
@@ -44,43 +61,38 @@ class MainActivity : FlutterActivity() {
 
     private fun isWhatsAppInstalled(): Boolean {
         return WHATSAPP_PACKAGES.any { packageName ->
-            try {
-                packageManager.getPackageInfo(packageName, 0)
-                true
-            } catch (_: PackageManager.NameNotFoundException) {
-                false
-            }
+            isPackageInstalled(packageName)
         }
     }
 
-    private fun sharePdfToWhatsApp(
+    private fun launchWhatsAppPdfShare(
         pdfPath: String,
-        phoneDigits: String,
         text: String?,
+        jid: String?,
     ): Boolean {
         val file = File(pdfPath)
         if (!file.exists()) {
             return false
         }
-        val authority = "${packageName}.fileprovider"
+        val authority = "${applicationContext.packageName}.fileprovider"
         val uri: Uri = FileProvider.getUriForFile(this, authority, file)
-        val jid = "${phoneDigits}@s.whatsapp.net"
 
-        for (packageName in WHATSAPP_PACKAGES) {
-            if (!isPackageInstalled(packageName)) {
+        for (whatsappPackage in WHATSAPP_PACKAGES) {
+            if (!isPackageInstalled(whatsappPackage)) {
                 continue
             }
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "application/pdf"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                if (!text.isNullOrBlank()) {
-                    putExtra(Intent.EXTRA_TEXT, text)
-                }
-                putExtra(JID_EXTRA, jid)
-                setPackage(packageName)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
+            val intent = buildWhatsAppPdfIntent(
+                uri = uri,
+                text = text,
+                jid = jid,
+                whatsappPackage = whatsappPackage,
+            ) ?: continue
             try {
+                grantUriPermission(
+                    whatsappPackage,
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
                 startActivity(intent)
                 return true
             } catch (_: ActivityNotFoundException) {
@@ -88,6 +100,28 @@ class MainActivity : FlutterActivity() {
             }
         }
         return false
+    }
+
+    private fun buildWhatsAppPdfIntent(
+        uri: Uri,
+        text: String?,
+        jid: String?,
+        whatsappPackage: String,
+    ): Intent? {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "application/pdf"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            if (!text.isNullOrBlank()) {
+                putExtra(Intent.EXTRA_TEXT, text)
+            }
+            if (!jid.isNullOrBlank()) {
+                putExtra(JID_EXTRA, jid)
+            }
+            clipData = ClipData.newRawUri("", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            setPackage(whatsappPackage)
+        }
+        return intent
     }
 
     private fun isPackageInstalled(packageName: String): Boolean {

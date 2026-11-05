@@ -3,6 +3,7 @@ import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/utils/age_utils.dart';
 import 'package:feemanager/core/utils/phone_utils.dart';
 import 'package:feemanager/features/batches/domain/usecases/get_batch.dart';
+import 'package:feemanager/features/students/domain/entities/student.dart';
 import 'package:feemanager/features/students/domain/entities/student_draft.dart';
 import 'package:feemanager/features/students/domain/usecases/create_student.dart';
 import 'package:feemanager/features/students/domain/usecases/get_student.dart';
@@ -362,7 +363,7 @@ class StudentFormCubit extends Cubit<StudentFormState> {
       emit(StudentFormFailure(AppStrings.studentDuplicate, draft));
       return;
     }
-    final Result<dynamic> result;
+    final Result<Student> result;
     if (isEditing && _studentId != null) {
       result = await _updateStudent(
         UpdateStudentParams(
@@ -382,8 +383,8 @@ class StudentFormCubit extends Cubit<StudentFormState> {
       );
     }
     switch (result) {
-      case Success():
-        emit(const StudentFormSuccess());
+      case Success(:final value):
+        emit(StudentFormSuccess(value));
       case Err(:final failure):
         emit(StudentFormFailure(failure.message, draft));
     }

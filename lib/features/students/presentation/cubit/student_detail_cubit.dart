@@ -1,4 +1,5 @@
 import 'package:feemanager/core/error/result.dart';
+import 'package:feemanager/features/students/domain/entities/student.dart';
 import 'package:feemanager/features/students/domain/usecases/delete_student.dart';
 import 'package:feemanager/features/students/domain/usecases/get_student.dart';
 import 'package:feemanager/features/students/domain/usecases/student_import_usecases.dart';
@@ -62,6 +63,19 @@ class StudentDetailCubit extends Cubit<StudentDetailState> {
         }
       case Err(:final failure):
         emit(StudentDetailFailure(failure.message));
+    }
+  }
+
+  /// Applies [student] after a successful edit without reloading payments.
+  void applyStudentUpdate(Student student) {
+    final current = state;
+    if (current is StudentDetailLoaded) {
+      emit(
+        StudentDetailLoaded(
+          student: student,
+          payments: current.payments,
+        ),
+      );
     }
   }
 

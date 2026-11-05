@@ -104,5 +104,12 @@ final class StudentFormFailure extends StudentFormState {
 
 /// Save succeeded.
 final class StudentFormSuccess extends StudentFormState {
-  const StudentFormSuccess();
+  /// Creates success with the persisted [student].
+  const StudentFormSuccess(this.student);
+
+  /// Saved student from Firestore.
+  final Student student;
+
+  @override
+  List<Object?> get props => <Object?>[student];
 }

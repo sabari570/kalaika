@@ -1,11 +1,15 @@
 import 'package:feemanager/core/constants/app_spacing.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
+import 'package:feemanager/core/di/service_locator.dart';
 import 'package:feemanager/core/error/result.dart';
+import 'package:feemanager/core/usecase/usecase.dart';
 import 'package:feemanager/core/widgets/gradient_button.dart';
 import 'package:feemanager/core/widgets/outlined_copper_button.dart';
 import 'package:feemanager/features/fees/domain/entities/fee_row.dart';
 import 'package:feemanager/features/fees/presentation/cubit/fee_tracker_cubit.dart';
 import 'package:feemanager/features/fees/presentation/utils/receipt_delivery_utils.dart';
+import 'package:feemanager/features/settings/domain/entities/whatsapp_delivery_mode.dart';
+import 'package:feemanager/features/settings/domain/usecases/get_whatsapp_delivery_mode.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -90,45 +94,89 @@ class SentReceiptBottomSheet extends StatelessWidget {
           const SizedBox(height: AppSpacing.lg),
           OutlinedCopperButton(
             label: AppStrings.openReceipt,
-            onPressed: () => _shareReceipt(context),
+            onPressed: () => _openReceipt(context),
           ),
           const SizedBox(height: AppSpacing.sm),
           GradientButton(
             label: AppStrings.resendOnWhatsapp,
-            onPressed: () => _shareReceipt(context),
+            onPressed: () => _resendOnWhatsApp(context),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _shareReceipt(BuildContext context) async {
+  Future<WhatsAppDeliveryMode> _resolveDeliveryMode() async {
+    final result = await sl<GetWhatsAppDeliveryMode>()(const NoParams());
+    return switch (result) {
+      Success(:final value) => value,
+      Err() => WhatsAppDeliveryMode.defaultMode,
+    };
+  }
+
+  Future<void> _openReceipt(BuildContext context) async {
     Navigator.of(context).pop();
     await ReceiptDeliveryUtils.loadAndOpenShareSheet(
       context: context,
       student: row.student,
+      deliveryMode: WhatsAppDeliveryMode.receipt,
       loadPayload: () async {
         final pdfResult = await cubit.buildReceiptPdfForRow(row);
-        final messageResult = await cubit.buildShareMessageForRow(row);
-        switch (pdfResult) {
-          case Success(:final value):
-            final pdfBytes = value;
-            switch (messageResult) {
-              case Success(:final value):
-                return Success(
-                  (
-                    pdfBytes: pdfBytes,
-                    receiptNo: row.payment?.receiptNo ?? 'receipt',
-                    shareMessage: value,
-                  ),
-                );
-              case Err(:final failure):
-                return Err(failure);
-            }
-          case Err(:final failure):
-            return Err(failure);
-        }
+        return switch (pdfResult) {
+          Success(:final value) => Success(
+              (
+                pdfBytes: value,
+                receiptNo: row.payment?.receiptNo ?? 'receipt',
+                shareMessage: '',
+              ),
+            ),
+          Err(:final failure) => Err(failure),
+        };
       },
     );
+  }
+
+  Future<void> _resendOnWhatsApp(BuildContext context) async {
+    Navigator.of(context).pop();
+    final deliveryMode = await _resolveDeliveryMode();
+    if (!context.mounted) {
+      return;
+    }
+    await ReceiptDeliveryUtils.loadAndOpenShareSheet(
+      context: context,
+      student: row.student,
+      deliveryMode: deliveryMode,
+      loadPayload: () => _loadSharePayload(deliveryMode),
+    );
+  }
+
+  Future<Result<ReceiptSharePayload>> _loadSharePayload(
+    WhatsAppDeliveryMode deliveryMode,
+  ) async {
+    final receiptNo = row.payment?.receiptNo ?? 'receipt';
+    if (deliveryMode == WhatsAppDeliveryMode.message) {
+      final messageResult = await cubit.buildShareMessageForRow(row);
+      return switch (messageResult) {
+        Success(:final value) => Success(
+            (
+              pdfBytes: null,
+              receiptNo: receiptNo,
+              shareMessage: value,
+            ),
+          ),
+        Err(:final failure) => Err(failure),
+      };
+    }
+    final pdfResult = await cubit.buildReceiptPdfForRow(row);
+    return switch (pdfResult) {
+      Success(:final value) => Success(
+          (
+            pdfBytes: value,
+            receiptNo: receiptNo,
+            shareMessage: '',
+          ),
+        ),
+      Err(:final failure) => Err(failure),
+    };
   }
 }

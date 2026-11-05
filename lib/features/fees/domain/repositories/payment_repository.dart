@@ -20,7 +20,7 @@ abstract class PaymentRepository {
     String monthKey,
   );
 
-  /// Creates a paid payment, updates rollups, and returns PDF bytes.
+  /// Creates a paid payment, updates rollups, and optionally returns PDF bytes.
   Future<Result<RecordPaymentResult>> recordPaymentAndReceipt({
     required String branchId,
     required String batchId,
@@ -30,6 +30,7 @@ abstract class PaymentRepository {
     required String mode,
     required DateTime paidOn,
     String? note,
+    bool generatePdf = true,
   });
 
   /// Regenerates PDF bytes for an existing payment.
@@ -53,6 +54,7 @@ abstract class PaymentRepository {
     required String branchId,
     required String batchId,
     required String paymentId,
+    required String sentVia,
   });
 
   /// Voids a payment and reverses rollups.

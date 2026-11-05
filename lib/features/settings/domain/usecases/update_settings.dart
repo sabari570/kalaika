@@ -4,6 +4,7 @@ import 'package:feemanager/core/error/failure.dart';
 import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/usecase/usecase.dart';
 import 'package:feemanager/features/fees/domain/entities/institute_settings.dart';
+import 'package:feemanager/features/settings/domain/entities/whatsapp_delivery_mode.dart';
 import 'package:feemanager/features/settings/domain/repositories/settings_repository.dart';
 
 /// Persists institute details on the user profile.
@@ -79,4 +80,32 @@ class ResetMessageTemplate implements UseCase<void, NoParams> {
       ),
     );
   }
+}
+
+/// Persists the WhatsApp delivery mode preference.
+class UpdateWhatsAppDeliveryMode
+    implements UseCase<void, UpdateWhatsAppDeliveryModeParams> {
+  /// Creates the use case.
+  UpdateWhatsAppDeliveryMode(this._repository);
+
+  final SettingsRepository _repository;
+
+  @override
+  Future<Result<void>> call(UpdateWhatsAppDeliveryModeParams params) async {
+    try {
+      await _repository.updateWhatsAppDeliveryMode(params.mode);
+      return const Success<void>(null);
+    } on Object {
+      return const Err<void>(UnknownFailure(AppStrings.settingsSaveFailed));
+    }
+  }
+}
+
+/// Parameters for [UpdateWhatsAppDeliveryMode].
+class UpdateWhatsAppDeliveryModeParams {
+  /// Creates parameters.
+  const UpdateWhatsAppDeliveryModeParams({required this.mode});
+
+  /// Delivery mode to save.
+  final WhatsAppDeliveryMode mode;
 }

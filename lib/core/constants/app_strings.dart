@@ -55,6 +55,15 @@ abstract final class AppStrings {
   static const String settingsEditInstitute = 'Edit institute details';
   static const String settingsEditTemplate = 'Edit message template';
   static const String settingsMessageTemplate = 'Receipts and messaging';
+  static const String settingsWhatsAppDelivery = 'WhatsApp delivery';
+  static const String settingsWhatsAppDeliveryHelper =
+      'Choose whether fee confirmation opens WhatsApp with the '
+      'message template or with the receipt PDF. Only one can be '
+      'sent at a time.';
+  static const String settingsDeliveryMessageOnly = 'Send message only';
+  static const String settingsDeliveryReceiptOnly = 'Send receipt only';
+  static const String settingsDeliveryModeSaved =
+      'WhatsApp delivery preference has been saved.';
   static const String settingsTemplatePreview = 'Message template preview';
   static const String settingsTemplateEditor = 'Message template';
   static const String settingsTemplatePlaceholders =
@@ -175,17 +184,23 @@ abstract final class AppStrings {
   static const String confirmAndGenerateReceipt =
       'Confirm and generate receipt';
   static const String generatingReceipt = 'Generating receipt';
+  static const String preparingMessageShare = 'Preparing WhatsApp message';
   static const String preparingReceiptShare = 'Preparing receipt to share';
   static const String deleting = 'Deleting';
   static const String paymentMode = 'Payment mode';
   static const String paidOnDate = 'Paid on';
   static const String markReceiptSentTitle = 'Receipt delivery';
+  static const String markMessageSentTitle = 'Message delivery';
   static const String markReceiptSentMessage =
-      'Was the receipt and message sent to {name}?';
+      'Was the receipt sent to {name}?';
+  static const String markMessageSentMessage =
+      'Was the message sent to {name}?';
   static const String receiptAttachedWithMessage =
       'Attached with this message';
   static const String validWhatsappRequired =
       'A valid WhatsApp number is required.';
+  static const String whatsappMessageOpenFailed =
+      'WhatsApp could not be opened. Please try again.';
   static const String receiptDetails = 'Receipt details';
   static const String resendOnWhatsapp = 'Resend on WhatsApp';
   static const String markReceiptSentYes = 'Yes, mark as sent';

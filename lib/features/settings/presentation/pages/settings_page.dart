@@ -18,6 +18,7 @@ import 'package:feemanager/core/widgets/outlined_copper_button.dart';
 import 'package:feemanager/core/widgets/section_header.dart';
 import 'package:feemanager/features/auth/domain/usecases/sign_out.dart';
 import 'package:feemanager/features/settings/domain/entities/user_settings_view.dart';
+import 'package:feemanager/features/settings/domain/entities/whatsapp_delivery_mode.dart';
 import 'package:feemanager/features/settings/presentation/cubit/settings_cubit.dart';
 import 'package:feemanager/features/settings/presentation/cubit/settings_state.dart';
 import 'package:feemanager/features/settings/presentation/widgets/settings_info_row.dart';
@@ -90,6 +91,27 @@ class _SettingsContent extends StatelessWidget {
 
   final UserSettingsView view;
   final VoidCallback onSignOut;
+
+  Future<void> _saveDeliveryMode(
+    BuildContext context,
+    WhatsAppDeliveryMode mode,
+  ) async {
+    final result = await context.read<SettingsCubit>().setWhatsAppDeliveryMode(
+      mode,
+    );
+    if (!context.mounted) {
+      return;
+    }
+    switch (result) {
+      case Success<void>():
+        AppSnackBar.showSuccess(
+          context,
+          AppStrings.settingsDeliveryModeSaved,
+        );
+      case Err(:final failure):
+        AppSnackBar.showError(context, failure.message);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +214,62 @@ class _SettingsContent extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xl),
           const SectionHeader(title: AppStrings.settingsMessageTemplate),
+          const SizedBox(height: AppSpacing.sm),
+          KalaikaCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  AppStrings.settingsWhatsAppDelivery,
+                  style: theme.labelLarge?.copyWith(
+                    color: colors.creamMuted,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  AppStrings.settingsWhatsAppDeliveryHelper,
+                  style: theme.bodySmall?.copyWith(
+                    color: colors.creamMuted,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                RadioGroup<WhatsAppDeliveryMode>(
+                  groupValue: view.whatsappDeliveryMode,
+                  onChanged: (mode) {
+                    if (mode == null ||
+                        mode == view.whatsappDeliveryMode) {
+                      return;
+                    }
+                    unawaited(
+                      _saveDeliveryMode(context, mode),
+                    );
+                  },
+                  child: const Column(
+                    children: <Widget>[
+                      RadioListTile<WhatsAppDeliveryMode>(
+                        value: WhatsAppDeliveryMode.message,
+                        title: Text(
+                          AppStrings.settingsDeliveryMessageOnly,
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      ),
+                      RadioListTile<WhatsAppDeliveryMode>(
+                        value: WhatsAppDeliveryMode.receipt,
+                        title: Text(
+                          AppStrings.settingsDeliveryReceiptOnly,
+                        ),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
           Align(
             alignment: Alignment.centerRight,
             child: TextButton(

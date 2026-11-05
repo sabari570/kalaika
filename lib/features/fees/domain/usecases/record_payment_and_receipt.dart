@@ -23,6 +23,7 @@ class RecordPaymentAndReceipt
       mode: params.mode,
       paidOn: params.paidOn,
       note: params.note,
+      generatePdf: params.generatePdf,
     );
   }
 }
@@ -39,6 +40,7 @@ class RecordPaymentParams {
     required this.mode,
     required this.paidOn,
     this.note,
+    this.generatePdf = true,
   });
 
   /// Branch id.
@@ -64,4 +66,7 @@ class RecordPaymentParams {
 
   /// Optional note on the receipt.
   final String? note;
+
+  /// Whether to build the receipt PDF after recording.
+  final bool generatePdf;
 }

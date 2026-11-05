@@ -3,6 +3,7 @@ import 'package:feemanager/core/constants/firestore_keys.dart';
 import 'package:feemanager/features/auth/domain/entities/app_user.dart';
 import 'package:feemanager/features/fees/domain/entities/institute_settings.dart';
 import 'package:feemanager/features/settings/domain/entities/user_settings_view.dart';
+import 'package:feemanager/features/settings/domain/entities/whatsapp_delivery_mode.dart';
 
 /// Firestore read model for user settings.
 abstract final class UserSettingsMapper {
@@ -16,10 +17,14 @@ abstract final class UserSettingsMapper {
     final institute = _readInstitute(instituteRaw);
     final template = data?[FirestoreKeys.messageTemplate] as String? ??
         AppDefaults.messageTemplate;
+    final deliveryMode = WhatsAppDeliveryModeCodec.parse(
+      data?[FirestoreKeys.whatsappDeliveryMode] as String?,
+    );
     return UserSettingsView(
       user: user,
       institute: institute,
       messageTemplate: template.trim(),
+      whatsappDeliveryMode: deliveryMode,
     );
   }
 

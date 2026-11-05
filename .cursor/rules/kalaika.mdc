@@ -1,6 +1,5 @@
 ---
-description: Kalaika project rules
-alwaysApply: true
+alwaysApply: false
 ---
 - The source of truth is docs/KALAIKA_PLAN_v2.md. Read the relevant sections before changing code.
 - Follow the architecture and coding standards in Section 2 of the plan.

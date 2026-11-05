@@ -28,7 +28,8 @@ class PaymentWriteDataSource {
   final FirebaseFirestore _firestore;
   final Future<ReceiptPdfBuilder> Function() _pdfBuilderLoader;
 
-  /// Records payment, updates counter and summary, returns PDF bytes.
+  /// Records payment, updates counter and summary.
+  /// Optionally returns PDF bytes when [generatePdf] is true.
   Future<RecordPaymentResult> recordPaymentAndReceipt({
     required String branchId,
     required String batchId,
@@ -38,6 +39,7 @@ class PaymentWriteDataSource {
     required String mode,
     required DateTime paidOn,
     String? note,
+    bool generatePdf = true,
   }) async {
     final uid = FirebaseUserScope.requireUid();
     final paymentId = PaymentDocumentId.fromStudentAndMonth(
@@ -59,17 +61,19 @@ class PaymentWriteDataSource {
         if (context == null) {
           throw StateError(AppStrings.receiptGenerateFailed);
         }
-        final pdf = await _buildPdfFromPaymentMap(
-          data: data,
-          context: context,
-          monthKey: monthKey,
-          note: note,
-        );
         final shareMessage = _buildShareMessageFromPaymentMap(
           data: data,
           context: context,
           monthKey: monthKey,
         );
+        final pdf = generatePdf
+            ? await _buildPdfFromPaymentMap(
+                data: data,
+                context: context,
+                monthKey: monthKey,
+                note: note,
+              )
+            : null;
         return RecordPaymentResult(
           receiptNo: data[FirestoreKeys.receiptNo] as String? ?? '',
           status: data[FirestoreKeys.status] as String? ??
@@ -176,18 +180,6 @@ class PaymentWriteDataSource {
       rethrow;
     }
 
-    final pdfInput = _pdfInput(
-      context: context,
-      receiptNo: receiptNo,
-      monthKey: monthKey,
-      mode: mode,
-      amount: amount,
-      paidOn: paidOn,
-      note: note,
-      student: student,
-    );
-    final builder = await _pdfBuilderLoader();
-    final pdfBytes = await builder.build(pdfInput);
     final shareMessage = _buildShareMessage(
       context: context,
       monthKey: monthKey,
@@ -195,6 +187,21 @@ class PaymentWriteDataSource {
       batchFee: context.batchDefaultFee,
       receiptNo: receiptNo,
     );
+    Uint8List? pdfBytes;
+    if (generatePdf) {
+      final pdfInput = _pdfInput(
+        context: context,
+        receiptNo: receiptNo,
+        monthKey: monthKey,
+        mode: mode,
+        amount: amount,
+        paidOn: paidOn,
+        note: note,
+        student: student,
+      );
+      final builder = await _pdfBuilderLoader();
+      pdfBytes = await builder.build(pdfInput);
+    }
 
     return RecordPaymentResult(
       receiptNo: receiptNo,
@@ -270,6 +277,7 @@ class PaymentWriteDataSource {
     required String branchId,
     required String batchId,
     required String paymentId,
+    required String sentVia,
   }) async {
     final uid = FirebaseUserScope.requireUid();
     final payRef = _paymentRef(uid, branchId, batchId, paymentId);
@@ -287,11 +295,11 @@ class PaymentWriteDataSource {
         final before = PaymentSummarySnapshot.fromMap(beforeData);
         final afterData = Map<String, dynamic>.from(beforeData)
           ..[FirestoreKeys.status] = FirestoreKeys.statusSent
-          ..[FirestoreKeys.sentVia] = 'share'
+          ..[FirestoreKeys.sentVia] = sentVia
           ..[FirestoreKeys.sentAt] = FieldValue.serverTimestamp();
         transaction.update(payRef, {
           FirestoreKeys.status: FirestoreKeys.statusSent,
-          FirestoreKeys.sentVia: 'share',
+          FirestoreKeys.sentVia: sentVia,
           FirestoreKeys.sentAt: FieldValue.serverTimestamp(),
         });
         final after = PaymentSummarySnapshot.fromMap(afterData);

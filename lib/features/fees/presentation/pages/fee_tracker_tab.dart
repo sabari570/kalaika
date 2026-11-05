@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:feemanager/core/constants/app_spacing.dart';
 import 'package:feemanager/core/constants/app_strings.dart';
+import 'package:feemanager/core/di/service_locator.dart';
 import 'package:feemanager/core/error/result.dart';
 import 'package:feemanager/core/theme/app_colors.dart';
+import 'package:feemanager/core/usecase/usecase.dart';
 import 'package:feemanager/core/widgets/app_snack_bar.dart';
 import 'package:feemanager/core/widgets/app_text_field.dart';
 import 'package:feemanager/core/widgets/blocking_progress_dialog.dart';
@@ -20,6 +22,8 @@ import 'package:feemanager/features/fees/presentation/utils/receipt_delivery_uti
 import 'package:feemanager/features/fees/presentation/widgets/fee_row_widget.dart';
 import 'package:feemanager/features/fees/presentation/widgets/record_payment_confirm_dialog.dart';
 import 'package:feemanager/features/fees/presentation/widgets/sent_receipt_bottom_sheet.dart';
+import 'package:feemanager/features/settings/domain/entities/whatsapp_delivery_mode.dart';
+import 'package:feemanager/features/settings/domain/usecases/get_whatsapp_delivery_mode.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
@@ -258,6 +262,14 @@ class _FeeTrackerBody extends StatelessWidget {
     );
   }
 
+  Future<WhatsAppDeliveryMode> _resolveDeliveryMode() async {
+    final result = await sl<GetWhatsAppDeliveryMode>()(const NoParams());
+    return switch (result) {
+      Success(:final value) => value,
+      Err() => WhatsAppDeliveryMode.defaultMode,
+    };
+  }
+
   Future<void> _recordPayment(
     BuildContext context,
     FeeRow row,
@@ -273,9 +285,16 @@ class _FeeTrackerBody extends StatelessWidget {
     if (form == null || !context.mounted) {
       return;
     }
+    final deliveryMode = await _resolveDeliveryMode();
+    if (!context.mounted) {
+      return;
+    }
+    final generatePdf = deliveryMode == WhatsAppDeliveryMode.receipt;
     BlockingProgressDialog.show(
       context,
-      message: AppStrings.generatingReceipt,
+      message: generatePdf
+          ? AppStrings.generatingReceipt
+          : AppStrings.preparingMessageShare,
     );
     final cubit = context.read<FeeTrackerCubit>();
     final result = await cubit.recordPayment(
@@ -284,6 +303,7 @@ class _FeeTrackerBody extends StatelessWidget {
       mode: form.mode,
       paidOn: form.paidOn,
       note: form.note,
+      generatePdf: generatePdf,
     );
     if (context.mounted) {
       BlockingProgressDialog.hide(context);
@@ -300,6 +320,7 @@ class _FeeTrackerBody extends StatelessWidget {
           pdfBytes: value.pdfBytes,
           receiptNo: value.receiptNo,
           shareMessage: value.shareMessage,
+          deliveryMode: deliveryMode,
           promptMarkSent: true,
           treatRowAsPending: true,
           showPreparingDialog: true,
@@ -318,39 +339,50 @@ class _FeeTrackerBody extends StatelessWidget {
 
   Future<void> _shareReceipt(BuildContext context, FeeRow row) async {
     final cubit = context.read<FeeTrackerCubit>();
+    final deliveryMode = await _resolveDeliveryMode();
+    if (!context.mounted) {
+      return;
+    }
     await ReceiptDeliveryUtils.loadShareAndPromptMarkSent(
       context: context,
       row: row,
       cubit: cubit,
       promptMarkSent: true,
-      loadPayload: () => _loadSharePayload(cubit, row),
+      deliveryMode: deliveryMode,
+      loadPayload: () => _loadSharePayload(cubit, row, deliveryMode),
     );
   }
 
   Future<Result<ReceiptSharePayload>> _loadSharePayload(
     FeeTrackerCubit cubit,
     FeeRow row,
+    WhatsAppDeliveryMode deliveryMode,
   ) async {
-    final pdfResult = await cubit.buildReceiptPdfForRow(row);
-    final messageResult = await cubit.buildShareMessageForRow(row);
-    switch (pdfResult) {
-      case Success(:final value):
-        final pdfBytes = value;
-        switch (messageResult) {
-          case Success(:final value):
-            return Success(
-              (
-                pdfBytes: pdfBytes,
-                receiptNo: row.payment?.receiptNo ?? 'receipt',
-                shareMessage: value,
-              ),
-            );
-          case Err(:final failure):
-            return Err(failure);
-        }
-      case Err(:final failure):
-        return Err(failure);
+    final receiptNo = row.payment?.receiptNo ?? 'receipt';
+    if (deliveryMode == WhatsAppDeliveryMode.message) {
+      final messageResult = await cubit.buildShareMessageForRow(row);
+      return switch (messageResult) {
+        Success(:final value) => Success(
+            (
+              pdfBytes: null,
+              receiptNo: receiptNo,
+              shareMessage: value,
+            ),
+          ),
+        Err(:final failure) => Err(failure),
+      };
     }
+    final pdfResult = await cubit.buildReceiptPdfForRow(row);
+    return switch (pdfResult) {
+      Success(:final value) => Success(
+          (
+            pdfBytes: value,
+            receiptNo: receiptNo,
+            shareMessage: '',
+          ),
+        ),
+      Err(:final failure) => Err(failure),
+    };
   }
 
   Future<void> _voidPayment(BuildContext context, FeeRow row) async {

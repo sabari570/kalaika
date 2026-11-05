@@ -3,6 +3,7 @@ import 'package:feemanager/features/auth/domain/repositories/auth_repository.dar
 import 'package:feemanager/features/settings/data/datasources/settings_remote_datasource.dart';
 import 'package:feemanager/features/settings/data/repositories/settings_repository_impl.dart';
 import 'package:feemanager/features/settings/domain/repositories/settings_repository.dart';
+import 'package:feemanager/features/settings/domain/usecases/get_whatsapp_delivery_mode.dart';
 import 'package:feemanager/features/settings/domain/usecases/update_settings.dart';
 import 'package:feemanager/features/settings/domain/usecases/watch_user_settings.dart';
 import 'package:feemanager/features/settings/presentation/cubit/institute_settings_form_cubit.dart';
@@ -25,6 +26,9 @@ void configureSettingsDependencies() {
       ),
     )
     ..registerLazySingleton(
+      () => GetWhatsAppDeliveryMode(sl<SettingsRepository>()),
+    )
+    ..registerLazySingleton(
       () => UpdateInstituteSettings(sl<SettingsRepository>()),
     )
     ..registerLazySingleton(
@@ -33,9 +37,13 @@ void configureSettingsDependencies() {
     ..registerLazySingleton(
       () => ResetMessageTemplate(sl<SettingsRepository>()),
     )
+    ..registerLazySingleton(
+      () => UpdateWhatsAppDeliveryMode(sl<SettingsRepository>()),
+    )
     ..registerFactory(
       () => SettingsCubit(
         watchUserSettings: sl<WatchUserSettings>(),
+        updateWhatsAppDeliveryMode: sl<UpdateWhatsAppDeliveryMode>(),
       ),
     )
     ..registerFactory(

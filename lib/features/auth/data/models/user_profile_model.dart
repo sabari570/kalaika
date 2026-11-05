@@ -20,6 +20,8 @@ abstract final class UserProfileModel {
         FirestoreKeys.signatory: '',
       },
       FirestoreKeys.messageTemplate: AppDefaults.messageTemplate,
+      FirestoreKeys.whatsappDeliveryMode:
+          AppDefaults.whatsappDeliveryModeValue,
     };
   }
 }

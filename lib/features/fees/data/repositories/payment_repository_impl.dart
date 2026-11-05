@@ -51,6 +51,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
     required String mode,
     required DateTime paidOn,
     String? note,
+    bool generatePdf = true,
   }) async {
     try {
       final result = await writeDataSource.recordPaymentAndReceipt(
@@ -62,6 +63,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
         mode: mode,
         paidOn: paidOn,
         note: note,
+        generatePdf: generatePdf,
       );
       return Success<RecordPaymentResult>(result);
     } on Object catch (error, stackTrace) {
@@ -116,12 +118,14 @@ class PaymentRepositoryImpl implements PaymentRepository {
     required String branchId,
     required String batchId,
     required String paymentId,
+    required String sentVia,
   }) async {
     try {
       await writeDataSource.markReceiptSent(
         branchId: branchId,
         batchId: batchId,
         paymentId: paymentId,
+        sentVia: sentVia,
       );
       return const Success<void>(null);
     } on Object catch (error, stackTrace) {

@@ -17,6 +17,7 @@ import 'package:feemanager/core/widgets/kalaika_screen_body.dart';
 import 'package:feemanager/core/widgets/status_chip.dart';
 import 'package:feemanager/features/fees/domain/usecases/payment_receipt_actions.dart';
 import 'package:feemanager/features/fees/presentation/utils/receipt_delivery_utils.dart';
+import 'package:feemanager/features/settings/domain/entities/whatsapp_delivery_mode.dart';
 import 'package:feemanager/features/students/domain/entities/student.dart';
 import 'package:feemanager/features/students/domain/entities/student_payment_summary.dart';
 import 'package:feemanager/features/students/presentation/cubit/student_detail_cubit.dart';
@@ -273,10 +274,10 @@ class _StudentDetailBody extends StatelessWidget {
     StudentPaymentSummary payment,
   ) async {
     final buildPdf = sl<BuildReceiptPdf>();
-    final buildMessage = sl<BuildReceiptShareMessage>();
     await ReceiptDeliveryUtils.loadAndOpenShareSheet(
       context: context,
       student: student,
+      deliveryMode: WhatsAppDeliveryMode.receipt,
       loadPayload: () async {
         final pdfResult = await buildPdf(
           BuildReceiptPdfParams(
@@ -286,32 +287,16 @@ class _StudentDetailBody extends StatelessWidget {
             student: student,
           ),
         );
-        final messageResult = await buildMessage(
-          BuildReceiptShareMessageParams(
-            branchId: branchId,
-            batchId: batchId,
-            paymentId: payment.id,
-            student: student,
-          ),
-        );
-        switch (pdfResult) {
-          case Success(:final value):
-            final pdfBytes = value;
-            switch (messageResult) {
-              case Success(:final value):
-                return Success(
-                  (
-                    pdfBytes: pdfBytes,
-                    receiptNo: payment.receiptNo ?? payment.id,
-                    shareMessage: value,
-                  ),
-                );
-              case Err(:final failure):
-                return Err(failure);
-            }
-          case Err(:final failure):
-            return Err(failure);
-        }
+        return switch (pdfResult) {
+          Success(:final value) => Success(
+              (
+                pdfBytes: value,
+                receiptNo: payment.receiptNo ?? payment.id,
+                shareMessage: '',
+              ),
+            ),
+          Err(:final failure) => Err(failure),
+        };
       },
     );
   }

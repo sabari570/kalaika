@@ -18,6 +18,7 @@ class MarkReceiptSent implements UseCase<void, MarkReceiptSentParams> {
       branchId: params.branchId,
       batchId: params.batchId,
       paymentId: params.paymentId,
+      sentVia: params.sentVia,
     );
   }
 }
@@ -29,6 +30,7 @@ class MarkReceiptSentParams {
     required this.branchId,
     required this.batchId,
     required this.paymentId,
+    this.sentVia = 'share',
   });
 
   /// Branch id.
@@ -39,6 +41,9 @@ class MarkReceiptSentParams {
 
   /// Payment document id.
   final String paymentId;
+
+  /// Delivery channel (`share` or `wa_me`).
+  final String sentVia;
 }
 
 /// Regenerates receipt PDF bytes from Firestore payment data.

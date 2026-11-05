@@ -14,6 +14,7 @@ abstract final class FirestoreKeys {
   static const String signatory = 'signatory';
   static const String phone = 'phone';
   static const String messageTemplate = 'messageTemplate';
+  static const String whatsappDeliveryMode = 'whatsappDeliveryMode';
 
   /// Meta subcollection under a user.
   static const String meta = 'meta';

@@ -328,19 +328,21 @@ On confirm:
 
 ### 6.11 WhatsApp and receipt delivery
 
-**Primary path:** `share_plus` with the PDF file and optional short text. The teacher picks the guardian contact in the system share sheet (WhatsApp is a common choice).
+Delivery is controlled by `users/{uid}.whatsappDeliveryMode` (`"message"` | `"receipt"`, default `"receipt"`). The two modes are mutually exclusive because WhatsApp consumer share intents do not reliably attach a PDF and prefilled text together.
 
-**Secondary path:** `wa.me` with a text-only message built from the Settings template. Placeholder `{receipt_url}` is omitted or left unchanged on the Spark path because no Storage URL exists.
+**Receipt mode:** generate the PDF locally and open WhatsApp with the PDF only (`ACTION_SEND` / `share_plus`). Do not attach template text to the PDF share.
+
+**Message mode:** skip PDF generation after recording the payment. Open WhatsApp with the Settings template only via `https://wa.me/<digits>?text=<url-encoded message>` (`url_launcher`, `LaunchMode.externalApplication`). Placeholder `{receipt_url}` is omitted or left unchanged on the Spark path because no Storage URL exists.
 
 Recipient: the student's WhatsApp number. If it is missing or invalid, show "A valid WhatsApp number is required" with a shortcut to the student edit screen.
 
 Steps:
-1. After a successful record, share the PDF via `share_plus`.
-2. Optional: launch `https://wa.me/<digits>?text=<url-encoded message>` for a text-only follow-up (`url_launcher`, `LaunchMode.externalApplication`).
-3. When the app returns to the foreground (`WidgetsBindingObserver`), show: "Was the receipt sent to {recipient name}?" with "Yes, mark as sent" and "Not yet".
-   - "Yes, mark as sent": run `MarkReceiptSent` (6.12).
-   - "Not yet": leave status pending; the row keeps its "Send" button (re-share regenerates the PDF from Firestore).
-4. Pending row **Send**: regenerate PDF from payment data and share again.
+1. Read `whatsappDeliveryMode` before generating a receipt or opening WhatsApp.
+2. After a successful record, deliver according to the mode (PDF share or `wa.me` text).
+3. When the app returns to the foreground (`WidgetsBindingObserver`), show a mark-sent prompt appropriate to the mode.
+   - "Yes, mark as sent": run `MarkReceiptSent` (6.12) with `sentVia: "share"` (receipt) or `"wa_me"` (message).
+   - "Not yet": leave status pending; the row keeps its "Send" button.
+4. Pending row **Send** / resend: respect the current delivery mode (message rebuilds text only; receipt regenerates the PDF). Explicit "Open receipt" still builds the PDF on demand regardless of mode.
 
 Android manifest: internet permission, and a `<queries>` block for `https` VIEW intents and the `com.whatsapp` and `com.whatsapp.w4b` packages so that `canLaunchUrl` works on Android 11 and above.
 
@@ -349,6 +351,7 @@ Use case `MarkReceiptSent` updates the payment document: `status: "sent"`, `sent
 
 ### 6.13 Settings (Home tab 3)
 - Institute details used on receipts: institute name (default "Kalaika"), tagline (default "By Lakshmi Kumaran"), address lines, phone (default 9074283081), receipt footer note, signatory name
+- WhatsApp delivery mode: mutually exclusive choice of "Send message only" or "Send receipt only" (stored as `whatsappDeliveryMode`, default receipt). Changing the selection persists immediately.
 - WhatsApp message template (multi-line editor) with a placeholder reference and a live preview, plus "Reset to default"
 - Account card (name, email, avatar) and "Sign out" with a confirm dialog
 - App version
@@ -423,6 +426,7 @@ institute: {
   signatory: string
 }
 messageTemplate: string
+whatsappDeliveryMode: string  // "message" | "receipt"; default "receipt"
 ```
 
 ### 7.2 `branches/{branchId}`

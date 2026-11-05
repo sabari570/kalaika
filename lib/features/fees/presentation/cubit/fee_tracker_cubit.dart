@@ -122,13 +122,14 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
     _emitCombined();
   }
 
-  /// Records payment, updates Firestore, and returns PDF bytes.
+  /// Records payment, updates Firestore, and optionally returns PDF bytes.
   Future<Result<RecordPaymentResult>> recordPayment({
     required FeeRow row,
     required int amount,
     required String mode,
     required DateTime paidOn,
     String? note,
+    bool generatePdf = true,
   }) async {
     if (_recordingPayment) {
       return const Err<RecordPaymentResult>(
@@ -160,6 +161,7 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
           mode: mode,
           paidOn: paidOn,
           note: note,
+          generatePdf: generatePdf,
         ),
       );
     } finally {
@@ -208,7 +210,10 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
   }
 
   /// Marks the row payment as sent after sharing.
-  Future<Result<void>> markReceiptSentForRow(FeeRow row) async {
+  Future<Result<void>> markReceiptSentForRow(
+    FeeRow row, {
+    String sentVia = 'share',
+  }) async {
     final branchId = _branchId;
     final batchId = _batchId;
     if (branchId == null || batchId == null) {
@@ -224,6 +229,7 @@ class FeeTrackerCubit extends Cubit<FeeTrackerState> {
         branchId: branchId,
         batchId: batchId,
         paymentId: paymentId,
+        sentVia: sentVia,
       ),
     );
   }

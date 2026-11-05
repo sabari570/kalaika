@@ -9,6 +9,9 @@ abstract final class AppDefaults {
   /// Default institute contact phone (digits as stored on user profile).
   static const String institutePhone = '9074283081';
 
+  /// Default WhatsApp delivery mode stored on the user profile.
+  static const String whatsappDeliveryModeValue = 'receipt';
+
   /// Default WhatsApp message template for new accounts.
   static const String messageTemplate = '''
 Dear {recipient_name},

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:feemanager/features/auth/domain/entities/app_user.dart';
 import 'package:feemanager/features/fees/domain/entities/institute_settings.dart';
+import 'package:feemanager/features/settings/domain/entities/whatsapp_delivery_mode.dart';
 
 /// Read-only settings summary for the Settings tab.
 class UserSettingsView extends Equatable {
@@ -9,6 +10,7 @@ class UserSettingsView extends Equatable {
     required this.user,
     required this.institute,
     required this.messageTemplate,
+    required this.whatsappDeliveryMode,
   });
 
   /// Signed-in account.
@@ -19,6 +21,9 @@ class UserSettingsView extends Equatable {
 
   /// WhatsApp message template body.
   final String messageTemplate;
+
+  /// Whether fee delivery uses the message template or the receipt PDF.
+  final WhatsAppDeliveryMode whatsappDeliveryMode;
 
   /// First three non-empty lines of [messageTemplate] for preview.
   List<String> get templatePreviewLines {
@@ -32,5 +37,10 @@ class UserSettingsView extends Equatable {
   }
 
   @override
-  List<Object?> get props => <Object?>[user, institute, messageTemplate];
+  List<Object?> get props => <Object?>[
+        user,
+        institute,
+        messageTemplate,
+        whatsappDeliveryMode,
+      ];
 }
